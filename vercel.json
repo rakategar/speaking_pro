@@ -1,0 +1,27 @@
+{
+  "services": {
+    "frontend": {
+      "root": ".",
+      "framework": "nextjs"
+    },
+    "prosody": {
+      "root": "services/prosody"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/prosody/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "prosody"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "frontend"
+      }
+    }
+  ]
+}
