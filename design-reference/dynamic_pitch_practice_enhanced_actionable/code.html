@@ -1,0 +1,262 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Speaking Pro - Dynamic Pitch</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .pitch-graph-container {
+            background: linear-gradient(180deg, #0d1c32 0%, #081221 100%);
+        }
+        @keyframes scanline {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(400%); }
+        }
+        .scan-effect {
+            animation: scanline 3s linear infinite;
+        }
+        .word-active {
+            box-shadow: 0 0 15px rgba(0, 162, 253, 0.4);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e0e3e5",
+                        "text-secondary": "#64748B",
+                        "outline-variant": "#c5c6cd",
+                        "on-primary-fixed-variant": "#39475f",
+                        "on-tertiary-fixed-variant": "#004f58",
+                        "primary-fixed": "#d6e3ff",
+                        "secondary": "#00629d",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f2f4f6",
+                        "on-surface-variant": "#44474d",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#9cf0ff",
+                        "outline": "#75777e",
+                        "on-secondary-fixed": "#001d33",
+                        "on-primary-fixed": "#0d1c32",
+                        "secondary-fixed-dim": "#98cbff",
+                        "surface-tint": "#515f78",
+                        "on-tertiary-fixed": "#001f24",
+                        "surface-card": "#FFFFFF",
+                        "secondary-container": "#00a2fd",
+                        "surface-dim": "#d8dadc",
+                        "on-tertiary-container": "#0091a2",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#eff1f3",
+                        "background": "#f7f9fb",
+                        "surface-container-high": "#e6e8ea",
+                        "tertiary": "#000000",
+                        "inverse-primary": "#b9c7e4",
+                        "stroke-subtle": "#E2E8F0",
+                        "primary-container": "#0d1c32",
+                        "surface": "#f7f9fb",
+                        "inverse-surface": "#2d3133",
+                        "primary-fixed-dim": "#b9c7e4",
+                        "secondary-fixed": "#cfe5ff",
+                        "on-tertiary": "#ffffff",
+                        "primary": "#000000",
+                        "tertiary-container": "#001f24",
+                        "on-secondary": "#ffffff",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-bright": "#f7f9fb",
+                        "tertiary-fixed-dim": "#00daf3",
+                        "surface-container": "#eceef0",
+                        "on-background": "#191c1e",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#003558",
+                        "on-primary-container": "#76849f",
+                        "on-secondary-fixed-variant": "#004a77",
+                        "on-surface": "#191c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "margin-mobile": "20px",
+                        "margin-desktop": "40px",
+                        "bento-gap": "12px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "title-lg": ["Plus Jakarta Sans"],
+                        "label-sm": ["Plus Jakarta Sans"],
+                        "label-md": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "display-lg": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "800"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile py-4 bg-surface/80 backdrop-blur-xl shadow-sm">
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors active:scale-95">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md-mobile font-bold text-primary">Dynamic Pitch</h1>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-fixed">
+<img class="w-full h-full object-cover" data-alt="A professional male business avatar with a friendly smile, set against a clean, light blue corporate background. The lighting is soft and professional, echoing a premium edutech aesthetic. High-quality portrait photography with sharp focus on the subject." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBhQrYRSqs19jiqVlt6E0Hmy1Ic4zdW8ZDYv2a7EF77KJo6wEXcakegW2eSWOyV93aLfmatyvnB8tuIWzsA49icZJdGgH3zVPh_aWOa0ThI5NoKDqfRrhfa4FlnKM8wN_7CvjzYlBTUCrH5jn0iFoWFPRnud63ctv3VcFSTXMQjcxoAqv3ABBjCKY7QdRFT5IxyTTJ6oonwgVnheaakZxfvx3hHAiX-UwyOuQwnKX4-xACpzcwXZapkzkpboHkueiDHlfVlpYC2-mui">
+</div>
+</div>
+</header>
+<main class="pt-24 px-margin-mobile space-y-gutter">
+<!-- Pitch Visualizer Bento Card -->
+<div class="pitch-graph-container rounded-3xl p-6 relative overflow-hidden shadow-2xl min-h-[280px] flex flex-col justify-between">
+<!-- Background Grid Pattern -->
+<div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(circle, #ffffff 1px, transparent 1px); background-size: 30px 30px;"></div>
+<div class="relative z-10 flex justify-between items-start">
+<div>
+<span class="font-label-sm text-label-sm text-secondary-container uppercase tracking-wider">Live Vocal Range</span>
+<h3 class="font-title-lg text-title-lg text-white mt-1">Real-time Analysis</h3>
+</div>
+<div class="flex gap-2">
+<div class="px-3 py-1 rounded-full bg-secondary-container/20 border border-secondary-container/30 flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-secondary-container animate-pulse"></div>
+<span class="font-label-sm text-label-sm text-secondary-container">RECORDING</span>
+</div>
+</div>
+</div>
+<!-- The Graph Area -->
+<div class="relative h-32 w-full mt-4 flex items-end">
+<!-- Target Pitch Line -->
+<svg class="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+<path d="M 0 60 Q 50 20, 100 80 T 200 40 T 300 90 T 400 30" fill="none" stroke="rgba(255,255,255,0.2)" stroke-dasharray="4 4" stroke-width="2"></path>
+<!-- User Pitch Path -->
+<path class="drop-shadow-[0_0_8px_rgba(0,162,253,0.8)]" d="M 0 109.92712991037588 Q 40 95.99009294109409, 80 117.88575343068443 T 160 71.4460332324084 T 240 106.6313544266335 T 320 51.47839626701139" fill="none" id="user-pitch" stroke="#00a2fd" stroke-linecap="round" stroke-width="4"></path>
+</svg>
+<!-- Vertical Markers -->
+<div class="absolute left-0 top-0 bottom-0 flex flex-col justify-between py-2">
+<span class="text-[10px] text-white/40 font-bold">HIGH</span>
+<span class="text-[10px] text-white/40 font-bold">MID</span>
+<span class="text-[10px] text-white/40 font-bold">LOW</span>
+</div>
+</div>
+<div class="relative z-10 flex justify-between items-center mt-4">
+<div class="flex gap-4">
+<div class="flex flex-col">
+<span class="text-[10px] text-white/50">MATCH</span>
+<span class="text-white font-bold">84%</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] text-white/50">VARIATION</span>
+<span class="text-white font-bold">HIGH</span>
+</div>
+</div>
+<div class="px-4 py-2 rounded-xl bg-white text-primary-container font-bold text-label-md transition-all duration-300 transform scale-100 shadow-lg" id="feedback-badge">Keep Climbing</div>
+</div>
+</div>
+<!-- Script Content Bento Card -->
+<div class="bg-surface-card rounded-3xl p-6 shadow-sm border border-stroke-subtle">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-secondary text-lg">description</span>
+<h4 class="font-title-lg text-title-lg text-on-surface">Practice Script</h4>
+<button class="ml-auto flex items-center gap-1 px-3 py-1 rounded-full bg-secondary-container/10 text-secondary-container text-label-sm font-bold hover:bg-secondary-container/20 transition-colors"><span class="material-symbols-outlined text-[18px]">play_circle</span>Play Sample</button></div>
+<div class="space-y-4">
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+                    To make a lasting 
+                    <span class="inline-block px-2 py-0.5 rounded-lg bg-secondary-container/10 text-secondary-container font-extrabold border border-secondary-container/20 word-active">IMPACT<span class="material-symbols-outlined text-[14px] ml-1 align-middle">trending_up</span></span>, 
+                    your voice must carry genuine 
+                    <span class="inline-block px-2 py-0.5 rounded-lg bg-secondary-container/10 text-secondary-container font-extrabold border border-secondary-container/20">EMOTION<span class="material-symbols-outlined text-[14px] ml-1 align-middle">trending_up</span></span>. 
+                    It is not just about the words, but the 
+                    <span class="italic text-secondary">inflection</span> 
+                    behind them.
+                </p>
+<div class="flex flex-wrap gap-2 pt-2">
+<span class="px-3 py-1 bg-surface-container text-on-surface-variant rounded-full text-label-sm font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">info</span>
+                        Raise pitch on highlighted words
+                    </span>
+</div>
+</div>
+</div>
+<!-- Control Actions Bento Grid -->
+<div class="flex items-center justify-between gap-4 bg-surface-card p-4 rounded-3xl shadow-sm border border-stroke-subtle"><button class="flex flex-col items-center gap-1 text-secondary-container/60 hover:text-secondary-container transition-colors"><span class="material-symbols-outlined text-2xl">replay</span><span class="text-[10px] font-bold uppercase">Retry</span></button><button class="w-16 h-16 rounded-full bg-error flex items-center justify-center shadow-lg shadow-error/30 active:scale-95 transition-transform"><span class="material-symbols-outlined text-white text-3xl">stop</span></button><button class="flex flex-col items-center gap-1 text-secondary-container/60 hover:text-secondary-container transition-colors"><span class="material-symbols-outlined text-2xl">visibility</span><span class="text-[10px] font-bold uppercase">Review</span></button><button class="flex flex-col items-center gap-1 text-secondary-container/60 hover:text-secondary-container transition-colors"><span class="material-symbols-outlined text-2xl">check_circle</span><span class="text-[10px] font-bold uppercase">Finish</span></button></div>
+<!-- Additional Guidance -->
+<div class="bg-primary-container rounded-3xl p-5 flex items-center justify-between border border-white/10 shadow-xl"><div class="flex flex-col"><span class="text-white/50 text-[10px] font-bold uppercase tracking-widest">Session Progress</span><div class="flex items-center gap-2 mt-1"><div class="h-2 w-32 bg-white/10 rounded-full overflow-hidden"><div class="h-full w-3/4 bg-secondary-container shadow-[0_0_10px_rgba(0,162,253,0.5)]"></div></div><span class="text-white font-bold text-label-sm">75%</span></div></div><div class="flex flex-col items-end"><span class="text-white/50 text-[10px] font-bold uppercase tracking-widest">Target Pitch</span><span class="text-secondary-container font-bold text-label-md">220 Hz</span></div></div><div class="bg-secondary-fixed/30 rounded-3xl p-6 flex items-start gap-4 border border-secondary-fixed/50">
+<div class="bg-white rounded-2xl p-3 shadow-sm">
+<span class="material-symbols-outlined text-secondary">tips_and_updates</span>
+</div>
+<div>
+<h5 class="font-label-md text-label-md text-on-secondary-fixed-variant">Pro Tip</h5>
+<p class="text-label-sm text-on-secondary-fixed-variant opacity-80 mt-1">Try dropping your pitch at the end of sentences to sound more authoritative.</p>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+
+<script>
+        // Micro-interactions for feedback badges
+        const badges = ["Good Variation", "Keep Climbing", "Great Energy", "Perfect Pitch"];
+        const feedbackEl = document.getElementById('feedback-badge');
+        
+        let badgeIdx = 0;
+        setInterval(() => {
+            feedbackEl.style.transform = 'scale(0.9) opacity(0)';
+            setTimeout(() => {
+                badgeIdx = (badgeIdx + 1) % badges.length;
+                feedbackEl.innerText = badges[badgeIdx];
+                feedbackEl.style.transform = 'scale(1) opacity(1)';
+            }, 300);
+        }, 4000);
+
+        // Simple procedural wave movement simulation
+        const path = document.getElementById('user-pitch');
+        let phase = 0;
+        function animateGraph() {
+            phase += 0.05;
+            const y1 = 100 + Math.sin(phase) * 10;
+            const y2 = 90 + Math.cos(phase * 0.8) * 15;
+            const y3 = 110 + Math.sin(phase * 1.2) * 8;
+            const y4 = 70 + Math.cos(phase) * 12;
+            const y5 = 100 + Math.sin(phase * 0.5) * 10;
+            const y6 = 60 + Math.cos(phase * 1.5) * 15;
+            
+            path.setAttribute('d', `M 0 ${y1} Q 40 ${y2}, 80 ${y3} T 160 ${y4} T 240 ${y5} T 320 ${y6}`);
+            requestAnimationFrame(animateGraph);
+        }
+        animateGraph();
+    </script>
+
+
+</body></html>

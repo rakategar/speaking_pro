@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+
+<html lang="id" style=""><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pro Shop - Coach Faisal Maulana</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-primary-container": "#76849f",
+                        "surface-container-high": "#e6e8ea",
+                        "on-surface": "#191c1e",
+                        "secondary-fixed": "#cfe5ff",
+                        "surface": "#f7f9fb",
+                        "primary-container": "#0d1c32",
+                        "inverse-on-surface": "#eff1f3",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#001d33",
+                        "surface-card": "#FFFFFF",
+                        "on-primary-fixed": "#0d1c32",
+                        "error": "#ba1a1a",
+                        "on-primary": "#ffffff",
+                        "tertiary": "#000000",
+                        "on-tertiary": "#ffffff",
+                        "secondary-container": "#00a2fd",
+                        "surface-bright": "#f7f9fb",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-dim": "#d8dadc",
+                        "on-secondary": "#ffffff",
+                        "primary": "#000000",
+                        "inverse-surface": "#2d3133",
+                        "on-tertiary-fixed": "#001f24",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed": "#d6e3ff",
+                        "tertiary-fixed": "#9cf0ff",
+                        "background": "#f7f9fb",
+                        "surface-container": "#eceef0",
+                        "on-primary-fixed-variant": "#39475f",
+                        "on-background": "#191c1e",
+                        "tertiary-container": "#001f24",
+                        "surface-tint": "#515f78",
+                        "outline-variant": "#c5c6cd",
+                        "surface-container-low": "#f2f4f6",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed-dim": "#00daf3",
+                        "secondary": "#00629d",
+                        "on-secondary-container": "#003558",
+                        "text-secondary": "#64748B",
+                        "secondary-fixed-dim": "#98cbff",
+                        "on-tertiary-container": "#0091a2",
+                        "on-surface-variant": "#44474d",
+                        "inverse-primary": "#b9c7e4",
+                        "outline": "#75777e",
+                        "stroke-subtle": "#E2E8F0",
+                        "on-tertiary-fixed-variant": "#004f58",
+                        "surface-variant": "#e0e3e5",
+                        "primary-fixed-dim": "#b9c7e4",
+                        "on-secondary-fixed-variant": "#004a77",
+                        "on-error-container": "#93000a"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "margin-mobile": "20px",
+                        "bento-gap": "12px",
+                        "margin-desktop": "40px",
+                        "base": "4px",
+                        "gutter": "16px"
+                    },
+                    fontFamily: {
+                        "body-md": ["Plus Jakarta Sans"],
+                        "title-lg": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "label-md": ["Plus Jakarta Sans"],
+                        "label-sm": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "inter": ["Inter"]
+                    },
+                    fontSize: {
+                        "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+                        "title-lg": ["20px", { lineHeight: "28px", fontWeight: "600" }],
+                        "headline-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.01em", fontWeight: "700" }],
+                        "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }],
+                        "headline-lg-mobile": ["28px", { lineHeight: "36px", fontWeight: "700" }],
+                        "label-md": ["14px", { lineHeight: "20px", letterSpacing: "0.01em", fontWeight: "600" }],
+                        "label-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.02em", fontWeight: "500" }],
+                        "headline-md": ["24px", { lineHeight: "32px", fontWeight: "700" }],
+                        "display-lg": ["40px", { lineHeight: "48px", letterSpacing: "-0.02em", fontWeight: "800" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-inter { font-family: 'Inter', sans-serif; }
+        .glass-nav { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .bento-hover:hover { transform: translateY(-2px); transition: transform 0.2s ease, box-shadow 0.2s ease; box-shadow: 0 12px 30px rgba(0, 163, 255, 0.1); }
+        .glow-effect { box-shadow: 0 0 20px rgba(0, 218, 243, 0.2), inset 0 0 0 1px rgba(255,255,255,0.1); }
+        .btn-hover:hover { filter: brightness(1.1); transform: scale(0.98); transition: all 0.2s; }
+        
+        /* Hide scrollbar for a cleaner look but keep functionality */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen pb-32">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-background/80 dark:bg-surface-container/80 backdrop-blur-xl flex items-center justify-between px-margin-mobile py-4 w-full"><button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors active:scale-95 text-primary dark:text-on-primary-fixed mr-2">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-high border border-stroke-subtle flex-shrink-0">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A professional headshot of an Indonesian male public speaking coach. He is wearing a crisp navy suit, smiling confidently. Bright, modern lighting, clear background. High-end corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBndcihwnLMUL0DiTy3yOPYLDVNHsyLifjmIHBwX4N5Ntu019U5413XyChWqxqaOHUdqwMaT3TYtkkKuzncXseJTCE61u6wQEGVNvZGePmmrBq3wH1KmaND1UsAWU0iQ86jAe0nwZsMIw2bQx68zpki3qGLq_9YoY7CycA4N_873Vw5UyOsLN7mMG2bp3Zeha6VehDbIRFy_goT599NNCjhdHINK0ARxWlVUnahWZOZRbA0uvjgCpx8rqS1SzpC1okmxwN31IpYZ6IP"/>
+</div>
+<h1 class="font-headline-md text-headline-md-mobile text-primary dark:text-primary-fixed-dim m-0">Selamat Pagi, [Nama]</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors active:scale-95 text-primary dark:text-on-primary-fixed">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-24 px-margin-mobile md:px-margin-desktop max-w-7xl mx-auto">
+<!-- Section Header -->
+<div class="mb-8 mt-4 text-center md:text-left">
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-primary mb-2">Pro Shop</h2>
+<p class="font-body-md text-text-secondary font-inter">Katalog Produk Digital &amp; Layanan Premium Coach Faisal Maulana</p>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-bento-gap">
+<!-- Product 1: E-Book -->
+<article class="bg-surface-card rounded-2xl p-6 border border-stroke-subtle shadow-[0_4px_20px_rgba(0,163,255,0.05)] bento-hover flex flex-col h-full relative overflow-hidden group">
+<div class="w-full h-48 rounded-xl overflow-hidden mb-6 bg-surface-container-low">
+<img alt="Public Speaking PRO Framework Book Cover" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6QX-dYLfgOfw0wEdHZlD7QvZCRlCPKn8kNni6SmClpP3zKw_qaIGqE3ZSQXXHQXC9vdhiDM6djYVeiQEo6mPwZZIVJGKBmKC0hvFI-xdqpZwN2KUx34DUKT9NguzALSPRtlTM7YMFfZScL4CMwtDt3sFBpbsssCTyViSK3FNIlP0MwXyhq8Snln2VD1kflVTEAtfXrki0yDkC4oE3GqWfNajRaw4xXRJ0YlxuOxdWZR-anzi8z7TRnY3SKnfoFyNyD_OyYT3-9ljB"/>
+</div>
+<div class="flex-grow">
+<span class="inline-block px-2 py-1 bg-surface-container-high text-on-surface-variant text-[10px] font-bold tracking-wider uppercase rounded mb-3 font-inter">E-Book</span>
+<h3 class="font-title-lg text-primary mb-2">Public Speaking PRO Framework</h3>
+<p class="font-body-md text-text-secondary mb-6 font-inter text-sm line-clamp-3">Panduan langkah demi langkah membangun kepercayaan diri dan teknik penyampaian yang memukau audiens dari segala kalangan.</p>
+</div>
+<div class="mt-auto pt-4 border-t border-stroke-subtle">
+<div class="flex items-end justify-between mb-4">
+<div>
+<span class="block text-xs text-text-secondary font-inter mb-1">Harga</span>
+<span class="font-headline-md text-primary block leading-none">Rp 99k</span>
+</div>
+</div>
+<button class="w-full bg-primary-container text-on-primary py-3 px-4 rounded-xl font-label-md btn-hover flex justify-center items-center gap-2">
+<span class="">Beli Sekarang</span>
+<span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</article>
+<!-- Product 2: Video Course (Featured / Glow Effect) -->
+<!-- Product 3: 1-on-1 Feedback -->
+<article class="bg-primary-container rounded-2xl p-6 glow-effect bento-hover flex flex-col h-full relative overflow-hidden lg:col-span-1 md:col-span-2"><div class="absolute inset-0 z-0">
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container via-primary-container/60 to-transparent z-10"></div>
+<img alt="Coach Faisal Maulana" class="w-full h-full object-cover opacity-40" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAODOMGeRjQxPh91L0DMA12G4_NkU1OwgCngo_q4I1TGMQhtLhX2m2D79eZj_7xgLQyGCogVJiUrsSzC2JLBlcOfw3MPUMfTGuj-MLEP81U_uq6TpmkQbrBz-gUYaQgsX99VVapeK1TMHyFuqOFAA9bbjMy9hYDCUx9K7GkzCbWBLkdG6oScZ6UPJZLUEhznfVVxkCbyggTxPnTDrXQTegS3dKehHbvgP182Bkc3tTAtSqf7cZphMyZG_3CYipk0EA2DOnL_HOwfbf"/>
+</div>
+<div class="relative z-20 flex flex-col h-full">
+<div class="flex-grow">
+<div class="flex items-center gap-2 mb-3">
+<span class="inline-block px-2 py-1 bg-[rgba(0,218,243,0.2)] text-tertiary-fixed-dim text-[10px] font-bold tracking-wider uppercase rounded font-inter">Exclusive Service</span>
+<span class="flex h-2 w-2 relative">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary-fixed-dim opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-tertiary-fixed-dim"></span>
+</span>
+<span class="text-xs text-tertiary-fixed-dim font-medium font-inter">Best Seller</span>
+</div>
+<h3 class="font-title-lg text-on-primary mb-2">1-on-1 Private Feedback</h3>
+<p class="font-body-md text-inverse-primary mb-6 font-inter text-sm md:w-4/5 line-clamp-3">Sesi konsultasi privat selama 60 menit. Dapatkan umpan balik langsung, koreksi postur, intonasi, dan struktur materi langsung dari Coach Faisal.</p>
+</div>
+<div class="mt-auto pt-4 border-t border-[rgba(255,255,255,0.1)]">
+<div class="flex items-end justify-between mb-4">
+<div>
+<span class="block text-xs text-inverse-primary font-inter mb-1">Harga</span>
+<span class="font-headline-md text-on-primary block leading-none">Rp 999k</span>
+</div>
+</div>
+<button class="w-full bg-tertiary-fixed-dim text-primary-container py-3 px-4 rounded-xl font-label-md btn-hover flex justify-center items-center gap-2 font-bold shadow-[0_0_15px_rgba(0,218,243,0.4)]">
+<span class="">Jadwalkan Sekarang</span>
+<span class="material-symbols-outlined text-sm">calendar_today</span>
+</button>
+</div>
+</div></article>
+</div>
+</main>
+<!-- Bottom Navigation Bar (Mobile / Primary Ecosystem Nav) -->
+<!-- Suppressed on desktop, visible on mobile -->
+</body></html>

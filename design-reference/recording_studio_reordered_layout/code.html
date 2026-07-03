@@ -1,0 +1,221 @@
+<!DOCTYPE html><html lang="id"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Recording Studio - Speaking Pro™</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-primary": "#ffffff",
+                        "primary-container": "#0d1c32",
+                        "inverse-primary": "#b9c7e4",
+                        "tertiary": "#000000",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed": "#9cf0ff",
+                        "surface-bright": "#f7f9fb",
+                        "on-secondary": "#ffffff",
+                        "surface-card": "#FFFFFF",
+                        "background": "#f7f9fb",
+                        "secondary-fixed": "#cfe5ff",
+                        "surface-tint": "#515f78",
+                        "outline-variant": "#c5c6cd",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#0d1c32",
+                        "surface": "#f7f9fb",
+                        "tertiary-fixed-dim": "#00daf3",
+                        "secondary-container": "#00a2fd",
+                        "secondary-fixed-dim": "#98cbff",
+                        "surface-variant": "#e0e3e5",
+                        "error-container": "#ffdad6",
+                        "primary-fixed-dim": "#b9c7e4",
+                        "on-tertiary-fixed": "#001f24",
+                        "on-tertiary-fixed-variant": "#004f58",
+                        "secondary": "#00629d",
+                        "primary": "#000000",
+                        "text-secondary": "#64748B",
+                        "stroke-subtle": "#E2E8F0",
+                        "surface-container-low": "#f2f4f6",
+                        "on-background": "#191c1e",
+                        "on-secondary-container": "#003558",
+                        "on-primary-container": "#76849f",
+                        "surface-container-high": "#e6e8ea",
+                        "on-primary-fixed-variant": "#39475f",
+                        "surface-dim": "#d8dadc",
+                        "on-secondary-fixed": "#001d33",
+                        "surface-container-highest": "#e0e3e5",
+                        "outline": "#75777e",
+                        "on-secondary-fixed-variant": "#004a77",
+                        "on-surface": "#191c1e",
+                        "primary-fixed": "#d6e3ff",
+                        "on-error": "#ffffff",
+                        "tertiary-container": "#001f24",
+                        "on-tertiary-container": "#0091a2",
+                        "on-error-container": "#93000a",
+                        "on-surface-variant": "#44474d",
+                        "surface-container": "#eceef0",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#2d3133",
+                        "inverse-on-surface": "#eff1f3"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "base": "4px",
+                        "margin-desktop": "40px",
+                        "margin-mobile": "20px",
+                        "bento-gap": "12px",
+                        "gutter": "16px"
+                    },
+                    fontFamily: {
+                        "body-md": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "label-md": ["Inter"],
+                        "title-lg": ["Plus Jakarta Sans"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "label-sm": ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        @keyframes pulse-cyan {
+            0% { box-shadow: 0 0 0 0 rgba(0, 162, 253, 0.4); }
+            70% { box-shadow: 0 0 0 40px rgba(0, 162, 253, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 162, 253, 0); }
+        }
+        
+        @keyframes pulse-cyan-inner {
+            0% { box-shadow: 0 0 0 0 rgba(0, 218, 243, 0.6); }
+            50% { box-shadow: 0 0 0 20px rgba(0, 218, 243, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 218, 243, 0); }
+        }
+
+        .glow-cyan-active {
+            animation: pulse-cyan 2s infinite cubic-bezier(0.66, 0, 0, 1),
+                       pulse-cyan-inner 1.5s infinite cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Dynamic Soundwave Animation */
+        @keyframes soundwave {
+            0%, 100% { height: 8px; }
+            50% { height: 48px; }
+        }
+        
+        .bar {
+            animation: soundwave 1.2s ease-in-out infinite;
+            background: currentColor;
+            border-radius: 4px;
+            width: 4px;
+            margin: 0 2px;
+        }
+        .bar:nth-child(1) { animation-delay: 0.0s; }
+        .bar:nth-child(2) { animation-delay: 0.1s; }
+        .bar:nth-child(3) { animation-delay: 0.2s; }
+        .bar:nth-child(4) { animation-delay: 0.3s; }
+        .bar:nth-child(5) { animation-delay: 0.4s; }
+        .bar:nth-child(6) { animation-delay: 0.5s; }
+        .bar:nth-child(7) { animation-delay: 0.6s; }
+
+        /* Fluid background gradient for premium feel */
+        .bg-studio-gradient {
+            background: radial-gradient(circle at 50% -20%, rgba(0, 162, 253, 0.08) 0%, rgba(247, 249, 251, 1) 60%);
+        }
+        
+        /* Theme Backgrounds */
+        .theme-ceo {
+            background: radial-gradient(circle at 50% 30%, rgba(13, 28, 50, 0.08) 0%, rgba(255, 255, 255, 0.8) 100%);
+        }
+        .theme-boardroom {
+            background: linear-gradient(135deg, rgba(207, 229, 255, 0.1) 0%, rgba(255, 255, 255, 0.9) 100%);
+        }
+        .theme-forum {
+            background: radial-gradient(circle at 80% 20%, rgba(0, 162, 253, 0.05) 0%, rgba(255, 255, 255, 0.9) 100%);
+        }
+        .theme-wedding {
+            background: linear-gradient(to bottom, rgba(255, 218, 214, 0.05) 0%, rgba(255, 255, 255, 0.9) 100%);
+        }
+    </style>
+</head>
+<body class="bg-[#F8FAFC] min-h-screen flex flex-col font-body-md text-on-surface antialiased selection:bg-secondary-container selection:text-on-secondary-container" style="background-color: #F8FAFC;">
+<!-- Minimal TopAppBar (Suppressed default nav, optimized for focused task) -->
+
+<!-- Main Recording Canvas -->
+<main class="flex-1 flex flex-col items-center justify-center px-margin-mobile py-8 relative w-full max-w-lg mx-auto pb-24">
+<!-- Bento Card Container -->
+<div class="flex flex-col items-center mb-6"><div class="flex items-center gap-3 text-[#0A192F]"><div class="relative flex h-3 w-3 shadow-[0_0_12px_rgba(186,26,26,0.6)]"><span class="animate-pulse absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-error"></span></div><span class="text-[40px] font-extrabold tracking-tight font-body-md leading-none">04:45</span></div><span class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/60 mt-2">Recording Session • Limit 05:00</span></div><div class="w-full max-w-lg mx-auto bg-white rounded-[24px] shadow-2xl border border-outline-variant/40 overflow-hidden flex flex-col" id="recording-card">
+<!-- Environment Visual Area -->
+<div class="relative w-full bg-surface-container overflow-hidden aspect-[3/4]">
+<!-- POV Image -->
+<div class="absolute inset-0 z-0">
+<img alt="CEO Stage Environment" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLsSH3wwiOaXwFzcBjtSsOYPemx4G0APD7izvYDr93J9GkgeW8raMuY0An-3F3K21rXiOC7ELiOR6bzK4r0KX8NQHa9r32Hc-C56YGD5B6dVgy6pNzXrLoSawpGh29HENAIw2AUaN_XMOGRu5qn07QeTbs3n0zwshpn-MBdWj2rVqz5uIs3UUiogbst9-UVYPr8g95u66sdk-dUgJRKk9s6KoBpaxV60Iime-3vr_uBe7O7hkE-su8BGTZN3">
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40"></div>
+</div>
+<!-- Top Overlay: Timer & Privacy -->
+<div class="absolute top-4 inset-x-4 flex justify-between items-start z-10">
+<div class="bg-black/40 backdrop-blur-md text-white px-3 py-1 rounded-full flex items-center gap-1.5 border border-white/20">
+<span class="material-symbols-outlined text-[14px]">lock</span>
+<span class="font-label-sm text-[10px] font-semibold uppercase tracking-wider">Privat</span>
+</div>
+</div>
+<!-- Center: Mic Button -->
+<div class="absolute inset-0 flex items-center justify-center z-10">
+<button class="w-[80px] h-[80px] bg-white rounded-full flex items-center justify-center text-primary-container shadow-2xl active:scale-95 transition-transform glow-cyan-active">
+<span class="material-symbols-outlined text-[32px]" style="font-variation-settings: 'FILL' 1;">mic</span>
+</button>
+</div>
+<!-- Bottom Overlay: Environment Chips -->
+<div class="absolute bottom-4 inset-x-0 overflow-x-auto hide-scrollbar z-10">
+<div class="flex items-center justify-center gap-2 px-4 min-w-max">
+<button class="px-4 py-1.5 rounded-full bg-white text-primary-container font-label-sm text-[12px] font-semibold shadow-sm">CEO Stage</button>
+<button class="px-4 py-1.5 rounded-full bg-black/30 backdrop-blur-md text-white font-label-sm text-[12px] font-medium border border-white/10">Boardroom</button>
+<button class="px-4 py-1.5 rounded-full bg-black/30 backdrop-blur-md text-white font-label-sm text-[12px] font-medium border border-white/10">Grand Forum</button>
+<button class="px-4 py-1.5 rounded-full bg-black/30 backdrop-blur-md text-white font-label-sm text-[12px] font-medium border border-white/10">Wedding</button>
+</div>
+</div>
+</div>
+<!-- Footer Controls -->
+<div class="p-6 flex items-center gap-4 bg-white">
+<button class="w-14 h-14 rounded-full border border-outline-variant/40 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">pause</span>
+</button>
+<button class="flex-1 h-14 rounded-full bg-primary-container text-on-primary font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">stop_circle</span>
+<span class="">Stop &amp; Review</span>
+</button>
+</div>
+</div>
+<!-- Supportive Text outside card -->
+<div class="w-full mt-8"><h3 class="text-[12px] font-bold uppercase tracking-wider text-on-surface-variant/60 mb-4 px-6">Cara Kerja</h3><div class="flex overflow-x-auto gap-4 px-6 pb-4 hide-scrollbar snap-x snap-mandatory"><div class="min-w-[280px] bg-white p-4 rounded-[24px] shadow-sm border border-outline-variant/10 snap-center flex flex-col gap-2"><span class="text-[14px] font-bold text-primary-container">01. Pilih Atmosfer</span><p class="text-[12px] text-on-surface-variant/80 leading-relaxed">Sesuaikan lingkungan bicara Anda untuk simulasi yang nyata.</p></div><div class="min-w-[280px] bg-white p-4 rounded-[24px] shadow-sm border border-outline-variant/10 snap-center flex flex-col gap-2"><span class="text-[14px] font-bold text-primary-container">02. Mulai Bicara</span><p class="text-[12px] text-on-surface-variant/80 leading-relaxed">Sampaikan materi Anda dengan percaya diri di depan audiens virtual.</p></div><div class="min-w-[280px] bg-white p-4 rounded-[24px] shadow-sm border border-outline-variant/10 snap-center flex flex-col gap-2"><span class="text-[14px] font-bold text-primary-container">03. Evaluasi Mingguan</span><p class="text-[12px] text-on-surface-variant/80 leading-relaxed">Dapatkan analisis mendalam tentang performa bicara Anda setiap minggu.</p></div></div></div></main>
+<!-- BottomNavBar is intentionally SUPPRESSED per rules for linear/transactional/recording flows -->
+<style>
+    .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+</style>
+
+
+
+
+</body></html>

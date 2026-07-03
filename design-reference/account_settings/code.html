@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Speaking Pro - Account Settings</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "error-container": "#ffdad6",
+                      "primary-fixed": "#d6e3ff",
+                      "outline": "#75777e",
+                      "inverse-on-surface": "#eff1f3",
+                      "surface-dim": "#d8dadc",
+                      "on-secondary": "#ffffff",
+                      "on-error": "#ffffff",
+                      "on-tertiary-fixed": "#001f24",
+                      "error": "#ba1a1a",
+                      "tertiary": "#000000",
+                      "on-primary-container": "#76849f",
+                      "text-secondary": "#64748B",
+                      "tertiary-fixed": "#9cf0ff",
+                      "surface-container": "#eceef0",
+                      "inverse-primary": "#b9c7e4",
+                      "primary": "#000000",
+                      "secondary-fixed": "#cfe5ff",
+                      "on-error-container": "#93000a",
+                      "on-surface-variant": "#44474d",
+                      "secondary-container": "#00a2fd",
+                      "surface-container-highest": "#e0e3e5",
+                      "surface-bright": "#f7f9fb",
+                      "outline-variant": "#c5c6cd",
+                      "on-tertiary-container": "#0091a2",
+                      "secondary": "#00629d",
+                      "background": "#f7f9fb",
+                      "on-tertiary-fixed-variant": "#004f58",
+                      "surface": "#f7f9fb",
+                      "on-primary": "#ffffff",
+                      "on-secondary-container": "#003558",
+                      "on-primary-fixed": "#0d1c32",
+                      "inverse-surface": "#2d3133",
+                      "secondary-fixed-dim": "#98cbff",
+                      "tertiary-container": "#001f24",
+                      "surface-container-low": "#f2f4f6",
+                      "on-background": "#191c1e",
+                      "primary-fixed-dim": "#b9c7e4",
+                      "surface-variant": "#e0e3e5",
+                      "surface-tint": "#515f78",
+                      "primary-container": "#0d1c32",
+                      "on-secondary-fixed-variant": "#004a77",
+                      "on-primary-fixed-variant": "#39475f",
+                      "on-secondary-fixed": "#001d33",
+                      "surface-container-high": "#e6e8ea",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-card": "#FFFFFF",
+                      "on-tertiary": "#ffffff",
+                      "tertiary-fixed-dim": "#00daf3",
+                      "stroke-subtle": "#E2E8F0",
+                      "on-surface": "#191c1e"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin-desktop": "40px",
+                      "gutter": "16px",
+                      "margin-mobile": "20px",
+                      "bento-gap": "12px",
+                      "base": "4px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": ["Plus Jakarta Sans"],
+                      "headline-lg": ["Plus Jakarta Sans"],
+                      "headline-md": ["Plus Jakarta Sans"],
+                      "display-lg": ["Plus Jakarta Sans"],
+                      "title-lg": ["Plus Jakarta Sans"],
+                      "body-md": ["Plus Jakarta Sans"],
+                      "label-sm": ["Plus Jakarta Sans"],
+                      "label-md": ["Plus Jakarta Sans"],
+                      "body-lg": ["Plus Jakarta Sans"]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                      "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                      "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+              }
+            },
+          }
+        }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen antialiased">
+<!-- Top Navigation (Task-Focused / Transactional style) -->
+<!-- Applying style keys from TopAppBar JSON: style_component_shape, style_bg_color, style_separation_logic, style_shell_layout -->
+<header class="fixed top-0 w-full z-50 bg-background/80 dark:bg-surface-container/80 backdrop-blur-xl bg-transparent flex items-center justify-between px-margin-mobile py-4 w-full border-b-0 shadow-none">
+<!-- Back Action -->
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-lowest shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-stroke-subtle/50 text-primary hover:opacity-80 transition-opacity active:scale-95">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<!-- Header Title leveraging JSON style_brand_logo for anchor typography -->
+<h1 class="font-headline-md text-headline-md-mobile text-primary font-bold absolute left-1/2 -translate-x-1/2">
+            Settings
+        </h1>
+<!-- Invisible spacer for flexbox alignment -->
+<div class="w-10 h-10"></div>
+</header>
+<!-- Main Canvas: Fluid Bento Grid -->
+<main class="pt-[90px] pb-12 px-margin-mobile md:px-margin-desktop max-w-5xl mx-auto flex flex-col md:grid md:grid-cols-2 gap-bento-gap">
+<!-- Section 1: Account Information (Spans 2 columns on desktop) -->
+<section class="md:col-span-2 bg-surface-card rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,163,255,0.05)] border border-stroke-subtle/50 flex flex-col gap-6 relative overflow-hidden">
+<!-- Decorative subtle glow -->
+<div class="absolute -top-24 -right-24 w-48 h-48 bg-secondary-container/10 rounded-full blur-3xl pointer-events-none"></div>
+<div class="flex items-center justify-between">
+<h2 class="font-title-lg text-title-lg text-primary">Account Information</h2>
+<button class="font-label-md text-label-md text-secondary bg-secondary/5 hover:bg-secondary/10 px-4 py-2 rounded-lg transition-colors border border-secondary/20">
+                    Edit Profile
+                </button>
+</div>
+<div class="flex flex-col sm:flex-row items-start sm:items-center gap-6 mt-2">
+<div class="relative group cursor-pointer">
+<img class="w-24 h-24 rounded-full object-cover border-4 border-surface shadow-sm" data-alt="A highly professional studio headshot of a modern corporate executive, neutral soft background, bright natural lighting, crisp focus on the face, exuding confidence and competence, suitable for a premium edutech platform profile." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxLq96FFsC0dHWrFtINCguYFZ3phYu1QEtaV7mvrAb3_DO9vslhbIAkJBcX8FxlwMVz6o9-QGTexEYVoAB4zydafzNmQmVATQccEC-D-x-mp5WTF7Sb3U8eHG_IHWSyZSFUyImIKhYTHV5Jlcs36KNsI1JswrcBEsq2QgpATMU175db38Oudncjyb72TYwfjm6em1b8zztyrkKyvXXZKyvGkWpLYyC3ZQXcWuX1foDpdmQfbxM0g-OmD05C32TA8IOYw8kv64-P09k"/>
+<div class="absolute inset-0 bg-primary/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white">photo_camera</span>
+</div>
+</div>
+<div class="flex flex-col gap-1 flex-1">
+<h3 class="font-headline-md text-headline-md-mobile text-primary">Alex Mercer</h3>
+<p class="font-body-md text-body-md text-text-secondary flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">mail</span>
+                        alex.mercer@example.com
+                    </p>
+<p class="font-body-md text-body-md text-text-secondary flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-[18px]">work</span>
+                        Senior Enterprise Account
+                    </p>
+</div>
+<div class="hidden sm:flex flex-col gap-2 items-end">
+<span class="font-label-sm text-label-sm px-3 py-1 bg-tertiary-fixed/20 text-on-tertiary-container rounded-full border border-tertiary-fixed/30">Pro Tier Active</span>
+<span class="font-label-sm text-label-sm text-text-secondary">Renews Nov 15, 2024</span>
+</div>
+</div>
+</section>
+<!-- Section 2: Notifications (Spans 1 column) -->
+<section class="bg-surface-card rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,163,255,0.05)] border border-stroke-subtle/50 flex flex-col gap-6">
+<div class="flex items-center gap-3 border-b border-stroke-subtle pb-4">
+<div class="w-10 h-10 rounded-full bg-secondary-container/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">notifications</span>
+</div>
+<h2 class="font-title-lg text-title-lg text-primary">Notifications</h2>
+</div>
+<div class="flex flex-col gap-5">
+<!-- Toggle Item 1 (Active) -->
+<div class="flex items-center justify-between group">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-primary">Push Notifications</span>
+<span class="font-body-md text-body-md text-text-secondary text-sm">Course updates and alerts</span>
+</div>
+<button class="w-12 h-6 rounded-full bg-secondary-container relative flex items-center px-1 transition-colors cursor-pointer shadow-inner">
+<div class="w-4 h-4 rounded-full bg-on-secondary absolute right-1 shadow-sm"></div>
+</button>
+</div>
+<!-- Toggle Item 2 (Active) -->
+<div class="flex items-center justify-between group">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-primary">Email Digest</span>
+<span class="font-body-md text-body-md text-text-secondary text-sm">Weekly progress reports</span>
+</div>
+<button class="w-12 h-6 rounded-full bg-secondary-container relative flex items-center px-1 transition-colors cursor-pointer shadow-inner">
+<div class="w-4 h-4 rounded-full bg-on-secondary absolute right-1 shadow-sm"></div>
+</button>
+</div>
+<!-- Toggle Item 3 (Inactive) -->
+<div class="flex items-center justify-between group">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-primary">Marketing Emails</span>
+<span class="font-body-md text-body-md text-text-secondary text-sm">Special offers and news</span>
+</div>
+<button class="w-12 h-6 rounded-full bg-surface-variant relative flex items-center px-1 transition-colors cursor-pointer border border-outline-variant/30">
+<div class="w-4 h-4 rounded-full bg-on-surface-variant absolute left-1 shadow-sm"></div>
+</button>
+</div>
+</div>
+</section>
+<!-- Section 3: Security & Privacy (Spans 1 column) -->
+<section class="bg-surface-card rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,163,255,0.05)] border border-stroke-subtle/50 flex flex-col gap-6">
+<div class="flex items-center gap-3 border-b border-stroke-subtle pb-4">
+<div class="w-10 h-10 rounded-full bg-primary-container/5 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+<h2 class="font-title-lg text-title-lg text-primary">Security &amp; Privacy</h2>
+</div>
+<div class="flex flex-col">
+<!-- Action Row 1 -->
+<div class="flex items-center justify-between py-3 cursor-pointer group hover:bg-surface-container-lowest -mx-2 px-2 rounded-lg transition-colors">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-text-secondary group-hover:text-primary transition-colors">password</span>
+<span class="font-label-md text-label-md text-primary">Change Password</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+<!-- Action Row 2 -->
+<div class="flex items-center justify-between py-3 cursor-pointer group hover:bg-surface-container-lowest -mx-2 px-2 rounded-lg transition-colors">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-text-secondary group-hover:text-primary transition-colors">shield_person</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-primary">Two-Factor Authentication</span>
+<span class="font-label-sm text-label-sm text-secondary">Currently Disabled</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+<!-- Action Row 3 -->
+<div class="flex items-center justify-between py-3 cursor-pointer group hover:bg-surface-container-lowest -mx-2 px-2 rounded-lg transition-colors">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-text-secondary group-hover:text-primary transition-colors">devices</span>
+<span class="font-label-md text-label-md text-primary">Connected Devices</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Section 4: Help & Support (Spans 2 columns) -->
+<section class="md:col-span-2 bg-surface-card rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,163,255,0.05)] border border-stroke-subtle/50 flex flex-col gap-6">
+<div class="flex items-center gap-3 mb-2">
+<h2 class="font-title-lg text-title-lg text-primary">Help &amp; Support</h2>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+<!-- Grid Item 1 -->
+<div class="flex flex-col items-start gap-3 p-4 rounded-xl border border-stroke-subtle hover:border-secondary-container hover:shadow-sm cursor-pointer transition-all bg-background/50 group">
+<span class="material-symbols-outlined text-secondary text-[28px] group-hover:scale-110 transition-transform">help</span>
+<span class="font-label-md text-label-md text-primary">FAQ &amp; Articles</span>
+</div>
+<!-- Grid Item 2 -->
+<div class="flex flex-col items-start gap-3 p-4 rounded-xl border border-stroke-subtle hover:border-secondary-container hover:shadow-sm cursor-pointer transition-all bg-background/50 group">
+<span class="material-symbols-outlined text-secondary text-[28px] group-hover:scale-110 transition-transform">support_agent</span>
+<span class="font-label-md text-label-md text-primary">Contact Support</span>
+</div>
+<!-- Grid Item 3 -->
+<div class="flex flex-col items-start gap-3 p-4 rounded-xl border border-stroke-subtle hover:border-secondary-container hover:shadow-sm cursor-pointer transition-all bg-background/50 group">
+<span class="material-symbols-outlined text-secondary text-[28px] group-hover:scale-110 transition-transform">menu_book</span>
+<span class="font-label-md text-label-md text-primary">User Guide</span>
+</div>
+<!-- Grid Item 4 -->
+<div class="flex flex-col items-start gap-3 p-4 rounded-xl border border-stroke-subtle hover:border-secondary-container hover:shadow-sm cursor-pointer transition-all bg-background/50 group">
+<span class="material-symbols-outlined text-secondary text-[28px] group-hover:scale-110 transition-transform">bug_report</span>
+<span class="font-label-md text-label-md text-primary">Report an Issue</span>
+</div>
+</div>
+</section>
+<!-- Danger Zone / Logout (Spans 2 columns) -->
+<div class="md:col-span-2 flex flex-col items-center justify-center pt-6 gap-2">
+<button class="font-label-md text-label-md text-error flex items-center gap-2 px-6 py-3 rounded-full hover:bg-error-container/50 transition-colors border border-transparent hover:border-error/20">
+<span class="material-symbols-outlined">logout</span>
+                Sign Out of Speaking Pro
+            </button>
+<span class="font-label-sm text-label-sm text-text-secondary opacity-60">Version 4.2.1 (Build 890)</span>
+</div>
+</main>
+</body></html>
