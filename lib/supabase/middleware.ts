@@ -3,11 +3,13 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Paths reachable without a session. /analyst has its own password gate;
 // manifest + service worker must be public or the PWA install breaks.
+// The Midtrans webhook authenticates via sha512 signature, not a session.
 const PUBLIC_PATHS = [
   "/login",
   "/auth",
   "/analyst",
   "/api/analyst",
+  "/api/payments/midtrans-notify",
   "/manifest.json",
   "/sw.js",
   "/icons",

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/profile/SignOutButton";
 import { InstallPwa } from "@/components/pwa/InstallPwa";
+import { SubscribeMenuItem } from "@/components/payment/SubscribeMenuItem";
 
 export const dynamic = "force-dynamic";
 
@@ -138,15 +139,6 @@ export default async function ProfilePage() {
       toneAqua: false,
     },
     {
-      href: "/subscription/renew",
-      icon: "workspace_premium",
-      title: "Subscription",
-      subtitle: isPro
-        ? `Premium Aktif${renews ? ` • s.d. ${renews}` : ""}`
-        : "Free Tier",
-      toneAqua: true,
-    },
-    {
       href: "/pro-shop",
       icon: "shopping_bag",
       title: "Pro Shop",
@@ -201,6 +193,23 @@ export default async function ProfilePage() {
               military_tech
             </span>
             Speaking Level: {speakingLevel(avgScore)}
+          </div>
+          <div
+            className={
+              isPro
+                ? "mt-2 rounded-full px-4 py-1.5 flex items-center gap-1.5 font-label-sm text-label-sm bg-tertiary-fixed-dim/20 text-on-tertiary-container border border-tertiary-fixed-dim/30"
+                : "mt-2 rounded-full px-4 py-1.5 flex items-center gap-1.5 font-label-sm text-label-sm bg-surface-container text-on-surface-variant border border-stroke-subtle"
+            }
+          >
+            <span
+              className="material-symbols-outlined text-[16px]"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              {isPro ? "verified" : "lock"}
+            </span>
+            {isPro
+              ? `Berlangganan Premium${renews ? ` • s.d. ${renews}` : ""}`
+              : "Belum Berlangganan"}
           </div>
         </section>
 
@@ -317,6 +326,7 @@ export default async function ProfilePage() {
                 </Link>
               </li>
             ))}
+            <SubscribeMenuItem isPro={isPro} renewsLabel={renews} />
             <InstallPwa />
           </ul>
         </section>
