@@ -3,12 +3,17 @@
 Deployed 2026-07-03. Isolated from BTN/HANA/score (see `/opt/PAUSED_PROJECTS.md`).
 
 ## Akses
-- **Publik (utama):** **https://faisalmaulana.site** (+ www) — HTTPS Let's Encrypt, auto-renew.
-  Semua HTTP di-redirect ke HTTPS. **Fitur rekam suara AKTIF** (secure-context terpenuhi).
-- Domain: A record `@` + CNAME `www` → `31.97.107.224` (registrar Domainesia, NS domainesia.net).
-- Cert: `/etc/letsencrypt/live/faisalmaulana.site/` (certbot --nginx, renew via systemd timer).
-- Akses lama `http://31.97.107.224:8092` sudah **dipensiunkan** (site nginx `speaking-pro`
-  di-disable). App di-build untuk origin `https://faisalmaulana.site`.
+- **Publik (utama, sejak 2026-07-04):** **https://speakingpro.online** — HTTPS Let's Encrypt,
+  auto-renew. Semua HTTP di-redirect ke HTTPS. **Fitur rekam suara AKTIF** (secure-context).
+  `www.speakingpro.online` **belum** diarahkan ke VPS ini (masih resolve ke IP Vercel) —
+  hanya apex domain yang live; minta user pindahkan DNS `www` jika ingin subdomain itu jalan.
+- Domain: A record `@` → `31.97.107.224` (registrar Domainesia, NS domainesia.net).
+- Cert: `/etc/letsencrypt/live/speakingpro.online/` (certbot --nginx, renew via systemd timer).
+- **Domain lama `https://faisalmaulana.site` dipensiunkan** — nginx site `faisalmaulana`
+  kini hanya 301-redirect semua path ke `speakingpro.online` (cert lama tetap dijaga aktif
+  agar redirect HTTPS-nya valid). App di-build untuk origin `https://speakingpro.online`
+  (`NEXT_PUBLIC_SUPABASE_URL`) — jangan lupa `npm run build` ulang kalau domain berubah lagi.
+- Akses lama `http://31.97.107.224:8092` tetap dipensiunkan (site nginx `speaking-pro` off).
 
 ## Login / Auth
 - Halaman `/login` sudah **dimodifikasi dari repo asli**: tombol *Send Magic Link* &
@@ -23,7 +28,7 @@ Deployed 2026-07-03. Isolated from BTN/HANA/score (see `/opt/PAUSED_PROJECTS.md`
 ## Arsitektur & port (semua terpisah dari project lain)
 | Komponen | Port | Dikelola oleh |
 |---|---|---|
-| nginx publik | **80/443** | site `faisalmaulana` (faisalmaulana.site, SSL) |
+| nginx publik | **80/443** | site `speakingpro.online` (SSL); site `faisalmaulana` = 301 redirect saja |
 | Next.js (next start) | 127.0.0.1:**3300** | `speaking-pro-web.service` |
 | Prosody FastAPI (uvicorn) | 127.0.0.1:**8100** | `speaking-pro-prosody.service` |
 | Supabase kong/API | **54361** | Supabase CLI (project_id `speaking_pro`) |
@@ -51,7 +56,7 @@ nginx `:8092` mem-proxy: `/auth/v1/ /rest/v1/ /storage/v1/` → kong 54361; sisa
   > menunjuk ke `/root/.local/share/supabase/supabase-go`, kalau tidak → error "Could not find supabase-go".
 
 ## Kunci & environment (`/opt/speaking_pro/.env.local`, chmod 600)
-- `NEXT_PUBLIC_SUPABASE_URL=https://faisalmaulana.site`
+- `NEXT_PUBLIC_SUPABASE_URL=https://speakingpro.online`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_…`
 - `SUPABASE_SERVICE_ROLE_KEY=sb_secret_…`  (format kunci baru; `sb_secret` = service role)
 - `HF_TOKEN=hf_…`  (Hugging Face — kini hanya **fallback ASR** `whisper-large-v3` bila Gemini
@@ -66,7 +71,7 @@ nginx `:8092` mem-proxy: `/auth/v1/ /rest/v1/ /storage/v1/` → kong 54361; sisa
 - `NEXT_PUBLIC_*` di-inline saat **build**, jadi ubah nilai → wajib `npm run build` ulang.
 
 ## Dashboard /analyst & Load Test
-- **https://faisalmaulana.site/analyst** — password `viboxs` (cookie 12 jam). Menampilkan:
+- **https://speakingpro.online/analyst** — password `viboxs` (cookie 12 jam). Menampilkan:
   CPU load/RAM/swap/disk, status service+container, log journalctl (web/prosody/system),
   dan statistik durasi pipeline analisis per tahap (prosody/ASR/LLM/total; avg/p50/p95).
 - Sumber data durasi: tabel `analysis_metrics` (migrasi `20260704000000`), diisi otomatis
@@ -147,6 +152,23 @@ nginx `:8092` mem-proxy: `/auth/v1/ /rest/v1/ /storage/v1/` → kong 54361; sisa
 - **Reminder harian**: worker antrean mengirim push "belum latihan hari ini" 1×/hari
   setelah 19:00 WIB ke user ber-subscription yang belum punya recording hari itu
   (`sendDailyReminders` di `lib/queue/worker.ts`).
+
+## Logo & Branding (sejak 2026-07-04)
+- Logo resmi diunggah user (`logo speaking pro.png`, di root repo, 382×430 RGBA). Diproses jadi:
+  `public/logo.png` (trimmed, transparan, untuk `<Logo/>` di halaman login), `public/icons/
+  icon-{192,512}.png` (purpose "any"), `icon-{192,512}-maskable.png` (bg navy `#0A192F`,
+  safe-zone 20%, purpose "maskable"), `public/icons/apple-touch-icon.png` (bg navy, iOS tidak
+  mendukung transparansi), dan `app/favicon.ico` (multi-size 16/32/48). Semua digenerate via
+  Pillow (`python3 -m venv` + `pip install pillow` — Pillow tidak terpasang system-wide).
+  `components/ui/Logo.tsx` diubah dari SVG hasil rekonstruksi manual jadi `next/image` yang
+  membaca `public/logo.png` langsung.
+- **Pending**: `supabase/config.toml` `[auth] site_url` & `additional_redirect_urls` sudah
+  diupdate ke `speakingpro.online`, TAPI belum diterapkan — perlu `supabase stop && supabase
+  start` untuk restart container auth (GoTrue) agar membaca ulang config.toml. Ini SENGAJA
+  ditunda (auto-mode classifier menolak `supabase stop` sebagai aksi berisiko ke service
+  live) karena dampaknya sekarang nol: signup pakai email+password tanpa konfirmasi email,
+  tidak ada OAuth, jadi site_url lama tidak memengaruhi user. Jalankan restart itu manual
+  kapan saja saat traffic sepi jika ingin config auth ikut ter-update.
 
 ## Operasional
 ```bash

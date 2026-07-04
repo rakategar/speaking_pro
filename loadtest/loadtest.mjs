@@ -15,7 +15,7 @@ const MODE = process.argv[2] ?? "prosody";
 const N = Number(process.argv[3] ?? 15);
 const VARIANT = process.argv[4] ?? "short"; // short | long
 
-const BASE = "https://faisalmaulana.site";
+const BASE = "https://speakingpro.online";
 const PROSODY_URL = "http://127.0.0.1:8100/analyze";
 
 // "long" = the 5-minute maximum the app now enforces (recordings outside
