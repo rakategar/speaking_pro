@@ -123,6 +123,31 @@ nginx `:8092` mem-proxy: `/auth/v1/ /rest/v1/ /storage/v1/` → kong 54361; sisa
   Gemini tidak pernah terlampaui berapa pun jumlah user — trade-off: hasil lebih lama saat ramai
   (user #20 tunggu ±3,4 mnt), dikompensasi UX antrean + push.
 
+## 18 Poin Daily Speaking Practice + PWA (sejak 2026-07-04, sore)
+- **18 drill harian client-side** (0 panggilan AI — konten hardcoded di
+  `lib/drills/content.ts`): 16 modul baru + aiueo/breathing lama. Route generik
+  `app/(focus)/drill/[slug]` + engine di `components/drill/` (teleprompter, metronome,
+  wizard, blank-space, tone-text, local-record dgn playback lokal tanpa upload, dst).
+  Seed modul: migrasi `20260704120000_daily_drills.sql` (kategori: Artikulasi, Tempo,
+  Kepercayaan Diri, Intonasi, Filler Words, Struktur).
+- **Menu harian personal** (`lib/drills/plan.ts`): flag masalah diturunkan dari rapor AI
+  terakhir (skor pilar/wpm/filler — tanpa AI call tambahan) → 2 drill/hari, rotasi
+  deterministik per tanggal WIB. Dashboard hero menampilkan menu + **progress target 10
+  menit/hari** (dihitung dari `recordings.status='drill_completed'` hari ini —
+  tidak ada tabel baru; endpoint lama `/api/drills/complete` dipakai ulang dgn durasi).
+- **Kebijakan rekaman (revisi user)**: TIDAK ada batasan jumlah rekaman/analisis per
+  minggu; batas durasi tetap 15 dtk – 5 mnt.
+- **Coach feedback**: kolom `reports.coach_feedback`; form input di /analyst
+  (`/api/analyst/feedback`, cookie analyst), tampil di rapor user sbg "Catatan Coach".
+- **PWA**: `public/manifest.json` + ikon `public/icons/` (installable, standalone,
+  theme navy); `sw.js` kini juga precache asset `_next/static` + fallback offline elegan
+  (handler push tetap). `/manifest.json`, `/sw.js`, `/icons` dikecualikan dari auth
+  middleware (`lib/supabase/middleware.ts`) — wajib publik. SW diregistrasi tiap load
+  via `components/pwa/PwaRegister.tsx` (root layout).
+- **Reminder harian**: worker antrean mengirim push "belum latihan hari ini" 1×/hari
+  setelah 19:00 WIB ke user ber-subscription yang belum punya recording hari itu
+  (`sendDailyReminders` di `lib/queue/worker.ts`).
+
 ## Operasional
 ```bash
 # status / restart

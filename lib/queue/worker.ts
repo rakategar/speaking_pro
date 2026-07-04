@@ -15,6 +15,50 @@ const POLL_MS = 3_000;
 const STALE_PROCESSING_MIN = 20; // reclaim jobs orphaned by a server restart
 const BACKOFF_BASE_S = 30;
 const BACKOFF_MAX_S = 300;
+const REMINDER_HOUR_WIB = 19; // daily practice reminder, Asia/Jakarta
+
+/**
+ * Once a day after 19:00 WIB, nudge push-subscribed users who have not
+ * practiced (no recording row of any status) that day. Piggybacks on the
+ * worker loop — no extra service or cron.
+ */
+let lastReminderDate = "";
+async function sendDailyReminders() {
+  const now = new Date();
+  const fmt = (opt: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", ...opt }).format(now);
+  const today = fmt({}); // YYYY-MM-DD
+  const hour = Number(fmt({ hour: "numeric", hourCycle: "h23" }));
+  if (hour < REMINDER_HOUR_WIB || lastReminderDate === today) return;
+  lastReminderDate = today;
+
+  const supabase = createServiceRoleClient();
+  const { data: subs } = await supabase
+    .from("push_subscriptions")
+    .select("user_id");
+  const userIds = [...new Set((subs ?? []).map((s) => s.user_id))];
+  if (!userIds.length) return;
+
+  const todayStart = new Date(`${today}T00:00:00+07:00`).toISOString();
+  const { data: practiced } = await supabase
+    .from("recordings")
+    .select("user_id")
+    .in("user_id", userIds)
+    .gte("created_at", todayStart);
+  const practicedSet = new Set((practiced ?? []).map((r) => r.user_id));
+
+  let sent = 0;
+  for (const userId of userIds) {
+    if (practicedSet.has(userId)) continue;
+    await sendPushToUser(userId, {
+      title: "Waktunya latihan 💪",
+      body: "Anda belum latihan hari ini. 10 menit drill menjaga streak Anda tetap hidup!",
+      url: "/dashboard",
+    });
+    sent += 1;
+  }
+  if (sent) console.log(`[worker] daily reminder sent to ${sent} user(s)`);
+}
 
 async function reclaimStale() {
   const supabase = createServiceRoleClient();
@@ -126,6 +170,7 @@ export function startWorker() {
         if (Date.now() - lastReclaim > 5 * 60_000) {
           lastReclaim = Date.now();
           await reclaimStale();
+          await sendDailyReminders();
         }
         // Drain everything that is ready, then sleep.
         while (await processOne()) {

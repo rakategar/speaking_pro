@@ -391,6 +391,7 @@ export type Database = {
         Row: {
           ai_insights: Json
           clarity_score: number | null
+          coach_feedback: string | null
           confidence_score: number | null
           created_at: string
           filler_word_count: number | null
@@ -406,6 +407,7 @@ export type Database = {
         Insert: {
           ai_insights?: Json
           clarity_score?: number | null
+          coach_feedback?: string | null
           confidence_score?: number | null
           created_at?: string
           filler_word_count?: number | null
@@ -421,6 +423,7 @@ export type Database = {
         Update: {
           ai_insights?: Json
           clarity_score?: number | null
+          coach_feedback?: string | null
           confidence_score?: number | null
           created_at?: string
           filler_word_count?: number | null

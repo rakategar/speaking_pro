@@ -1,8 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Paths reachable without a session. /analyst has its own password gate.
-const PUBLIC_PATHS = ["/login", "/auth", "/analyst", "/api/analyst"];
+// Paths reachable without a session. /analyst has its own password gate;
+// manifest + service worker must be public or the PWA install breaks.
+const PUBLIC_PATHS = [
+  "/login",
+  "/auth",
+  "/analyst",
+  "/api/analyst",
+  "/manifest.json",
+  "/sw.js",
+  "/icons",
+];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(

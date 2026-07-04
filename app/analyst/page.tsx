@@ -77,6 +77,112 @@ function StatCard({ title, stat }: { title: string; stat: StageStat }) {
   );
 }
 
+type FeedbackItem = {
+  id: string;
+  recording_id: string;
+  overall_score: number | null;
+  coach_feedback: string | null;
+  created_at: string;
+  duration_seconds: number | null;
+  user_name: string;
+};
+
+// Coach panel: write a manual note that shows up as "Catatan Coach" on the
+// user's report page.
+function CoachFeedbackSection() {
+  const [items, setItems] = useState<FeedbackItem[]>([]);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const res = await fetch("/api/analyst/feedback", { cache: "no-store" });
+    if (!res.ok) return;
+    const json = await res.json();
+    setItems(json.items ?? []);
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function save(id: string) {
+    setSavingId(id);
+    try {
+      await fetch("/api/analyst/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reportId: id, feedback: drafts[id] ?? "" }),
+      });
+      await load();
+      setDrafts((d) => {
+        const next = { ...d };
+        delete next[id];
+        return next;
+      });
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  return (
+    <section>
+      <h2 className="mb-3 text-lg font-bold text-primary">
+        Coach Feedback{" "}
+        <span className="text-sm font-normal text-text-secondary">
+          (15 rapor terakhir — catatan tampil di halaman rapor user)
+        </span>
+      </h2>
+      <div className="space-y-3">
+        {items.map((it) => (
+          <div
+            key={it.id}
+            className="rounded-2xl border border-stroke-subtle bg-surface-card p-4 shadow-soft"
+          >
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <span className="font-bold text-primary">{it.user_name}</span>
+              <span className="text-text-secondary">
+                {new Date(it.created_at).toLocaleString("id-ID")}
+              </span>
+              <span className="rounded-full bg-surface-container px-2 py-0.5 font-mono text-xs">
+                skor {it.overall_score ?? "-"}
+              </span>
+              <span className="rounded-full bg-surface-container px-2 py-0.5 font-mono text-xs">
+                {it.duration_seconds ? `${Math.round(it.duration_seconds)}s` : "-"}
+              </span>
+              {it.coach_feedback && !(it.id in drafts) && (
+                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+                  ✓ sudah diberi catatan
+                </span>
+              )}
+            </div>
+            <textarea
+              value={drafts[it.id] ?? it.coach_feedback ?? ""}
+              onChange={(e) =>
+                setDrafts((d) => ({ ...d, [it.id]: e.target.value }))
+              }
+              placeholder="Tulis catatan coach untuk user ini..."
+              rows={2}
+              className="mt-2 w-full rounded-xl border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary-container/30"
+            />
+            <button
+              onClick={() => save(it.id)}
+              disabled={savingId === it.id || !(it.id in drafts)}
+              className="mt-2 rounded-full bg-primary-container px-4 py-1.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40"
+            >
+              {savingId === it.id ? "Menyimpan..." : "Simpan Catatan"}
+            </button>
+          </div>
+        ))}
+        {!items.length && (
+          <p className="rounded-2xl border border-stroke-subtle bg-surface-card p-4 text-sm text-text-secondary shadow-soft">
+            Belum ada rapor analisis.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function LogBox({ title, text }: { title: string; text: string }) {
   return (
     <div className="rounded-2xl border border-stroke-subtle bg-surface-card p-4 shadow-soft">
@@ -324,6 +430,9 @@ export default function AnalystPage() {
             </table>
           </div>
         </section>
+
+        {/* ---- coach feedback ---- */}
+        <CoachFeedbackSection />
 
         {/* ---- logs ---- */}
         <section className="grid gap-4 lg:grid-cols-2">

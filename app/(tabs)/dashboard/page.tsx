@@ -1,5 +1,13 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { MODULE_META } from "@/lib/modules";
+import { DAILY_GOAL_MINUTES } from "@/lib/drills/content";
+import {
+  dailyPlan,
+  jakartaDayIndex,
+  jakartaStartOfToday,
+  type ReportSignals,
+} from "@/lib/drills/plan";
 
 export const dynamic = "force-dynamic";
 
@@ -38,23 +46,20 @@ export default async function DashboardPage() {
   const weekStart = startOfIsoWeek(now);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  const todayStart = jakartaStartOfToday(now);
+
   const [
     { data: profile },
-    { data: drill },
     { data: weekRecordings },
     { data: history },
     { data: latestAnalyzed },
+    { data: latestReport },
+    { data: todayDrills },
   ] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name, avatar_url, streak_count")
       .eq("id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("practice_modules")
-      .select("slug, title, category, duration_minutes")
-      .eq("is_ai_recommended", true)
-      .limit(1)
       .maybeSingle(),
     supabase
       .from("recordings")
@@ -72,9 +77,50 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from("reports")
+      .select(
+        "confidence_score, clarity_score, structure_score, intonation_score, wpm, filler_word_count",
+      )
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("recordings")
+      .select("duration_seconds")
+      .eq("status", "drill_completed")
+      .gte("created_at", todayStart.toISOString()),
   ]);
 
   const name = profile?.full_name ?? user.email?.split("@")[0] ?? "Speaker";
+
+  // Personalized daily menu from the latest report's weak points; rotates
+  // per calendar day (Asia/Jakarta). Falls back to a balanced rotation.
+  const plan = dailyPlan(
+    (latestReport as ReportSignals | null) ?? null,
+    jakartaDayIndex(now),
+  );
+  const { data: planModules } = await supabase
+    .from("practice_modules")
+    .select("slug, title, category, duration_minutes")
+    .in(
+      "slug",
+      plan.map((p) => p.slug),
+    );
+  const planWithTitles = plan.map((p) => ({
+    ...p,
+    module: planModules?.find((m) => m.slug === p.slug) ?? null,
+  }));
+  const personalized = latestReport !== null;
+
+  // Today's practiced minutes toward the 10-minute daily goal.
+  const todayMinutes = Math.floor(
+    (todayDrills ?? []).reduce((s, r) => s + (r.duration_seconds ?? 0), 0) / 60,
+  );
+  const goalPct = Math.min(
+    100,
+    Math.round((todayMinutes / DAILY_GOAL_MINUTES) * 100),
+  );
 
   // Which weekdays (Mon..Sun) have at least one recording this week.
   const activeDays = new Set(
@@ -154,27 +200,80 @@ export default async function DashboardPage() {
       </header>
 
       <main className="px-margin-mobile pt-24 flex flex-col gap-bento-gap">
-        {/* Hero: Today's Drill */}
-        <div className="bg-surface-container-lowest border border-stroke-subtle bento-card rounded-3xl p-6 flex flex-col gap-6">
+        {/* Hero: personalized daily drill menu */}
+        <div className="bg-surface-container-lowest border border-stroke-subtle bento-card rounded-3xl p-6 flex flex-col gap-5">
           <div className="flex justify-between items-start">
             <div className="flex flex-col gap-1">
               <span className="text-xs font-bold text-secondary-container uppercase tracking-wider">
                 Latihan Harian Anda
               </span>
               <h2 className="font-heading text-xl font-bold text-primary-container">
-                {drill
-                  ? `${drill.category} - ${drill.title}`
-                  : "Artikulasi - AIUEO Drill"}
+                {personalized
+                  ? "Menu dari rapor terakhir Anda"
+                  : "Menu latihan hari ini"}
               </h2>
             </div>
-            <div className="bg-secondary-fixed/40 text-secondary border border-secondary-fixed/50 px-3 py-1.5 rounded-full flex items-center gap-1 shrink-0">
+            <div
+              className={
+                goalPct >= 100
+                  ? "bg-secondary-container text-on-secondary px-3 py-1.5 rounded-full flex items-center gap-1 shrink-0"
+                  : "bg-secondary-fixed/40 text-secondary border border-secondary-fixed/50 px-3 py-1.5 rounded-full flex items-center gap-1 shrink-0"
+              }
+            >
               <span className="material-symbols-outlined text-[16px]">
-                timer
+                {goalPct >= 100 ? "task_alt" : "timer"}
               </span>
               <span className="text-xs font-semibold">
-                {drill?.duration_minutes ?? 10} Menit
+                {todayMinutes}/{DAILY_GOAL_MINUTES} mnt
               </span>
             </div>
+          </div>
+
+          {/* 10-minute daily goal */}
+          <div className="flex flex-col gap-1.5">
+            <div className="h-2.5 rounded-full bg-surface-container overflow-hidden">
+              <div
+                className={
+                  goalPct >= 100
+                    ? "h-full bg-light-aqua rounded-full shadow-[0_0_10px_rgba(0,229,255,0.5)]"
+                    : "h-full bg-secondary-container rounded-full"
+                }
+                style={{ width: `${Math.max(goalPct, 2)}%` }}
+              />
+            </div>
+            <span className="text-xs text-text-secondary">
+              {goalPct >= 100
+                ? "Target 10 menit hari ini tercapai — luar biasa! 🎉"
+                : `${DAILY_GOAL_MINUTES - todayMinutes} menit lagi menuju target harian.`}
+            </span>
+          </div>
+
+          {/* Today's drills */}
+          <div className="flex flex-col gap-2">
+            {planWithTitles.map((p, i) => (
+              <Link
+                key={p.slug}
+                href={MODULE_META[p.slug]?.route ?? `/drill/${p.slug}`}
+                className="flex items-center gap-3 p-3 rounded-2xl bg-surface-container-low border border-stroke-subtle hover:border-brand-cyan/50 active:scale-[0.99] transition"
+              >
+                <div className="w-10 h-10 rounded-xl bg-brand-cyan/10 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-primary text-[20px]">
+                    {MODULE_META[p.slug]?.icon ?? "mic"}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-primary truncate">
+                    {i + 1}. {p.module?.title ?? p.slug}
+                  </p>
+                  <p className="text-xs text-text-secondary">
+                    {p.category} · {p.module?.duration_minutes ?? 5} mnt
+                  </p>
+                </div>
+                <span className="material-symbols-outlined text-secondary-container">
+                  play_circle
+                </span>
+              </Link>
+            ))}
           </div>
 
           <div className="flex flex-col gap-3">
@@ -201,21 +300,6 @@ export default async function DashboardPage() {
               ))}
             </div>
           </div>
-
-          <Link
-            href={`/record${drill ? `?module=${drill.slug}` : ""}`}
-            className="w-full bg-secondary-container text-on-secondary rounded-2xl py-3.5 flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-md"
-          >
-            <span className="text-sm font-semibold tracking-wide">
-              Mulai Latihan
-            </span>
-            <span
-              className="material-symbols-outlined text-[20px]"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              play_arrow
-            </span>
-          </Link>
         </div>
 
         {/* Weekly Submission (dark bento) */}

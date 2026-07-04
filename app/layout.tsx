@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Inter } from "next/font/google";
+import { PwaRegister } from "@/components/pwa/PwaRegister";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -17,6 +18,19 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Speaking Pro™",
   description: "Latih public speaking bahasa Indonesia Anda dengan AI coach.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Speaking Pro",
+  },
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0A192F",
 };
 
 export default function RootLayout({
@@ -39,6 +53,7 @@ export default function RootLayout({
         className="min-h-full flex flex-col bg-background text-on-surface selection:bg-secondary-container selection:text-on-secondary-container"
         style={{ fontFamily: "var(--font-plus-jakarta-sans), sans-serif" }}
       >
+        <PwaRegister />
         {children}
       </body>
     </html>

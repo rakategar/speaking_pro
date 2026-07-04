@@ -18,9 +18,13 @@ type Module = {
 const CATEGORIES = [
   "Semua",
   "Artikulasi",
+  "Tempo",
   "Intonasi",
-  "Struktur",
   "Kepercayaan Diri",
+  "Filler Words",
+  "Struktur",
+  "Pernapasan",
+  "Simulasi",
 ];
 
 export function LibraryBrowser({ modules }: { modules: Module[] }) {

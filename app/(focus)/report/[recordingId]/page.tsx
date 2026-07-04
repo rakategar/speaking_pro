@@ -220,6 +220,28 @@ export default async function ReportPage({
           </div>
         </div>
 
+        {/* Coach feedback (ditulis manual oleh coach) */}
+        {report.coach_feedback && (
+          <div className="bg-surface-card rounded-3xl p-6 shadow-soft border border-stroke-subtle border-l-4 border-l-brand-cyan">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-full bg-secondary-container/10 flex items-center justify-center text-secondary">
+                <span className="material-symbols-outlined text-[18px]">
+                  sports
+                </span>
+              </div>
+              <h3 className="font-title-lg text-title-lg text-primary">
+                Catatan Coach
+              </h3>
+              <span className="ml-auto bg-secondary-fixed/40 text-secondary px-3 py-1 rounded-full font-label-sm text-label-sm">
+                Manual Review
+              </span>
+            </div>
+            <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed whitespace-pre-wrap">
+              {report.coach_feedback}
+            </p>
+          </div>
+        )}
+
         {/* Transcript */}
         {report.transcript && (
           <details className="bg-surface-card rounded-3xl p-6 shadow-soft border border-stroke-subtle group">
