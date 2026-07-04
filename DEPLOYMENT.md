@@ -70,17 +70,16 @@ nginx `:8092` mem-proxy: `/auth/v1/ /rest/v1/ /storage/v1/` → kong 54361; sisa
   CPU load/RAM/swap/disk, status service+container, log journalctl (web/prosody/system),
   dan statistik durasi pipeline analisis per tahap (prosody/ASR/LLM/total; avg/p50/p95).
 - Sumber data durasi: tabel `analysis_metrics` (migrasi `20260704000000`), diisi otomatis
-  oleh route analyze (instrumentasi di `app/api/recordings/[id]/analyze/route.ts`).
+  oleh pipeline analisis (`lib/analysis/pipeline.ts`).
 - Load test: `cd /opt/speaking_pro/loadtest && node loadtest.mjs prosody 15` (service intonasi
-  langsung) atau `node loadtest.mjs e2e N [long]` (N user: signup→upload→analisis penuh;
-  `long` = campuran rekaman 5/7,5/10 mnt; user test otomatis bernama loadtestN@speaking.local —
-  hapus setelahnya). Jika koneksi analyze putus di ±300 dtk (headersTimeout fetch), loadtest
-  otomatis polling status rekaman — server tetap memproses sampai selesai.
+  langsung) atau `node loadtest.mjs e2e N [long]` (N user: signup→upload→enqueue analisis lalu
+  polling status; `long` = rekaman 5 mnt (batas maksimal app); user test otomatis bernama
+  loadtestN@speaking.local — hapus setelahnya, termasuk objek storage via Storage API).
 - **Catatan teknis penting** (2026-07-04): fetch Node/undici memutus respons tanpa header di
   ±300 dtk (headersTimeout) MESKI AbortSignal lebih panjang. Karena prosody baru mengirim
   header setelah selesai, klien prosody memakai **node:http murni** (`lib/prosody/client.ts`,
-  timeout 540 dtk, di bawah nginx 600 dtk). Browser juga punya batas serupa (±300 dtk) —
-  utk rekaman >5 mnt di beban tinggi, UI perlu polling status (belum diimplement di frontend).
+  timeout 540 dtk, di bawah nginx 600 dtk). Browser tidak lagi menunggu respons analisis —
+  submit hanya enqueue (202), hasil dipantau via polling/push (lihat bagian Antrean).
 - **Hasil stress test 2026-07-04** (@1 vCPU, semua AI via Gemini):
   | Skenario | Sukses | Wall time | Keterangan |
   |---|---|---|---|
@@ -96,6 +95,33 @@ nginx `:8092` mem-proxy: `/auth/v1/ /rest/v1/ /storage/v1/` → kong 54361; sisa
   optimal **5-8** bersamaan, maksimum **15** (semua sukses tapi ekor ±9 mnt). Throughput
   berkelanjutan ±15 analisis/menit (dibatasi kuota Gemini). Estimasi user aktif (1 rekaman
   pendek per ±10 mnt/user): nyaman ±75-100, puncak ±150.
+
+## Antrean analisis, rate limit Gemini & push notification (sejak 2026-07-04)
+- **Rate limiter Gemini** (`lib/gemini/limiter.ts`): sliding window 60 dtk, budget
+  **12 request / 200k token** (di bawah kuota free tier 15 RPM / 250k TPM). Semua panggilan
+  Gemini (ASR + scoring) `acquire()` dulu — kelebihan menunggu slot, tidak pernah 429 by design.
+- **Antrean terstruktur**: submit rekaman = enqueue ke tabel `analysis_jobs`
+  (migrasi `20260704100000`), route analyze balas **202 + posisi antrean** tanpa menunggu.
+  Worker in-process (`lib/queue/worker.ts`, start via `instrumentation.ts`) memproses serial:
+  claim atomik, reclaim job macet >20 mnt.
+- **Retry sampai berhasil**: error transien (429/5xx/timeout) di-requeue dengan backoff
+  30 dtk×attempt (maks 300 dtk) tanpa batas percobaan. Hanya error input deterministik
+  (rekaman hilang / terlalu pendek / tanpa ucapan) yang gagal permanen — **tanpa notifikasi
+  gagal**; status hanya terlihat di /history.
+- **Push notification**: VAPID (`NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` +
+  `VAPID_CONTACT` di .env.local), service worker `public/sw.js`, subscription di tabel
+  `push_subscriptions`. Notifikasi **hanya saat analisis selesai** → link ke rapor.
+- **Satu analisis per user**: selama masih ada job queued/processing, upload & rekam baru
+  ditolak 409; halaman /record menampilkan overlay blokir + posisi antrean (unblock otomatis).
+- **Batas durasi rekaman: 15 dtk – 5 mnt** (sejak 2026-07-04), ditegakkan 3 lapis:
+  tombol Stop nonaktif <15 dtk + auto-submit saat 5 mnt (`app/(focus)/record/page.tsx`,
+  `useRecorder` hard-cap 300 dtk); validasi server di `POST /api/recordings` (400 jika
+  <15 atau >305 dtk); backstop pipeline (`MIN_DURATION_SECONDS` 15).
+- **Hasil tes antrean 2026-07-04**: 20 user submit bersamaan (rekaman 31 dtk) → 19/20 job
+  sukses `done`, 0 failed, drain ±3,4 mnt (±11,7 req Gemini/mnt — patuh limiter); 1 gagal
+  adalah 404 saat enqueue di script test, bukan kegagalan pipeline. Antrean membuat kuota
+  Gemini tidak pernah terlampaui berapa pun jumlah user — trade-off: hasil lebih lama saat ramai
+  (user #20 tunggu ±3,4 mnt), dikompensasi UX antrean + push.
 
 ## Operasional
 ```bash
