@@ -13,11 +13,11 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/dashboard";
 
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [pending, setPending] = useState<"password" | "magic" | "reset" | null>(
-    null,
-  );
+  const [pending, setPending] = useState<"password" | "signup" | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
 
   const supabase = createClient();
@@ -36,7 +36,7 @@ function LoginForm() {
         kind: "error",
         text:
           error.message === "Invalid login credentials"
-            ? "Email atau password salah. Coba lagi, atau masuk lewat Magic Link."
+            ? "Email atau password salah. Belum punya akun? Pilih Daftar di bawah."
             : error.message,
       });
       setPending(null);
@@ -46,57 +46,49 @@ function LoginForm() {
     router.refresh();
   }
 
-  async function handleMagicLink() {
+  // Instant email+password registration -- email confirmation is disabled
+  // on this deployment (no SMTP), so the session starts immediately.
+  async function handleSignUp(e: React.FormEvent) {
+    e.preventDefault();
     if (pending) return;
     setNotice(null);
-    if (!email) {
+    if (password.length < 6) {
+      setNotice({ kind: "error", text: "Password minimal 6 karakter." });
+      return;
+    }
+    setPending("signup");
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName || null } },
+    });
+    if (error) {
       setNotice({
         kind: "error",
-        text: "Isi alamat email dulu, lalu tekan Send Magic Link.",
+        text: error.message.includes("already registered")
+          ? "Email ini sudah terdaftar. Silakan pilih Masuk."
+          : error.message,
       });
+      setPending(null);
       return;
     }
-    setPending("magic");
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-      },
-    });
-    setPending(null);
-    if (error) {
-      setNotice({ kind: "error", text: error.message });
+    if (!data.session) {
+      // Shouldn't happen with confirmations off, but degrade gracefully.
+      setNotice({
+        kind: "success",
+        text: "Akun dibuat. Silakan masuk dengan email dan password Anda.",
+      });
+      setMode("signin");
+      setPending(null);
       return;
     }
-    setNotice({
-      kind: "success",
-      text: `Magic link terkirim ke ${email}. Cek inbox Anda -- akun baru dibuat otomatis.`,
-    });
+    router.replace(next);
+    router.refresh();
   }
 
-  async function handleForgotPassword() {
-    if (pending) return;
+  function switchMode(target: "signin" | "signup") {
+    setMode(target);
     setNotice(null);
-    if (!email) {
-      setNotice({
-        kind: "error",
-        text: "Isi alamat email dulu, lalu tekan Forgot Password.",
-      });
-      return;
-    }
-    setPending("reset");
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/settings`,
-    });
-    setPending(null);
-    if (error) {
-      setNotice({ kind: "error", text: error.message });
-      return;
-    }
-    setNotice({
-      kind: "success",
-      text: `Link reset password terkirim ke ${email}.`,
-    });
   }
 
   return (
@@ -111,7 +103,35 @@ function LoginForm() {
         </p>
       </div>
 
-      <form onSubmit={handleSignIn} className="mt-8 space-y-5">
+      <form
+        onSubmit={mode === "signin" ? handleSignIn : handleSignUp}
+        className="mt-8 space-y-5"
+      >
+        {mode === "signup" && (
+          <div>
+            <label
+              htmlFor="fullName"
+              className="block text-label-md font-label-md text-on-surface-variant mb-2"
+            >
+              Nama Lengkap
+            </label>
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px]">
+                person
+              </span>
+              <input
+                id="fullName"
+                type="text"
+                autoComplete="name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Nama Anda"
+                className="w-full rounded-2xl border border-outline-variant bg-surface-card py-3.5 pl-12 pr-4 text-body-md text-on-surface placeholder:text-outline focus:border-secondary-container focus:outline-none focus:ring-2 focus:ring-secondary-container/30 transition"
+              />
+            </div>
+          </div>
+        )}
+
         <div>
           <label
             htmlFor="email"
@@ -137,22 +157,12 @@ function LoginForm() {
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <label
-              htmlFor="password"
-              className="block text-label-md font-label-md text-on-surface-variant"
-            >
-              Password
-            </label>
-            <button
-              type="button"
-              onClick={handleForgotPassword}
-              className="text-label-md font-label-md text-brand-cyan hover:underline disabled:opacity-50"
-              disabled={pending !== null}
-            >
-              {pending === "reset" ? "Mengirim..." : "Forgot Password?"}
-            </button>
-          </div>
+          <label
+            htmlFor="password"
+            className="block text-label-md font-label-md text-on-surface-variant mb-2"
+          >
+            Password
+          </label>
           <div className="relative">
             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px]">
               lock
@@ -160,7 +170,11 @@ function LoginForm() {
             <input
               id="password"
               type="password"
-              autoComplete="current-password"
+              autoComplete={
+                mode === "signin" ? "current-password" : "new-password"
+              }
+              required
+              minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -188,11 +202,15 @@ function LoginForm() {
           disabled={pending !== null}
           className="w-full flex items-center justify-center gap-2 rounded-full bg-primary-container py-4 text-body-md font-semibold text-white shadow-soft hover:opacity-90 active:scale-[0.99] transition disabled:opacity-60"
         >
-          {pending === "password" ? (
-            "Signing in..."
+          {pending ? (
+            mode === "signin" ? (
+              "Signing in..."
+            ) : (
+              "Membuat akun..."
+            )
           ) : (
             <>
-              Sign In
+              {mode === "signin" ? "Sign In" : "Daftar"}
               <span className="material-symbols-outlined text-[20px]">
                 arrow_forward
               </span>
@@ -209,26 +227,36 @@ function LoginForm() {
         <span className="h-px flex-1 bg-stroke-subtle" />
       </div>
 
-      <button
-        type="button"
-        onClick={handleMagicLink}
-        disabled={pending !== null}
-        className="w-full flex items-center justify-center gap-2 rounded-full border-2 border-brand-cyan bg-surface-card py-3.5 text-body-md font-semibold text-on-surface hover:bg-secondary-fixed/40 active:scale-[0.99] transition disabled:opacity-60"
-      >
-        {pending === "magic" ? (
-          "Mengirim link..."
-        ) : (
-          <>
-            <span className="material-symbols-outlined text-[20px] text-brand-cyan">
-              magic_button
-            </span>
-            Send Magic Link
-          </>
-        )}
-      </button>
+      {mode === "signin" ? (
+        <button
+          type="button"
+          onClick={() => switchMode("signup")}
+          disabled={pending !== null}
+          className="w-full flex items-center justify-center gap-2 rounded-full border-2 border-brand-cyan bg-surface-card py-3.5 text-body-md font-semibold text-on-surface hover:bg-secondary-fixed/40 active:scale-[0.99] transition disabled:opacity-60"
+        >
+          <span className="material-symbols-outlined text-[20px] text-brand-cyan">
+            person_add
+          </span>
+          Daftar Akun Baru
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => switchMode("signin")}
+          disabled={pending !== null}
+          className="w-full flex items-center justify-center gap-2 rounded-full border-2 border-brand-cyan bg-surface-card py-3.5 text-body-md font-semibold text-on-surface hover:bg-secondary-fixed/40 active:scale-[0.99] transition disabled:opacity-60"
+        >
+          <span className="material-symbols-outlined text-[20px] text-brand-cyan">
+            login
+          </span>
+          Sudah punya akun? Masuk
+        </button>
+      )}
 
       <p className="mt-6 text-center text-label-sm font-label-sm text-text-secondary">
-        Belum punya akun? Kirim Magic Link -- akun dibuat otomatis.
+        {mode === "signin"
+          ? "Belum punya akun? Daftar -- langsung aktif tanpa verifikasi email."
+          : "Akun langsung aktif, tidak perlu verifikasi email."}
       </p>
     </div>
   );

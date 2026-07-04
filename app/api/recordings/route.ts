@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_BYTES = 25 * 1024 * 1024; // ~5 min opus is well under this
+const MIN_DURATION_S = 15;
+const MAX_DURATION_S = 5 * 60 + 5; // small slack for timer rounding
 
 // POST /api/recordings -- multipart: audio (File), environment,
 // durationSeconds, moduleSlug? Creates the row + uploads to Storage.
@@ -15,6 +17,22 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // One analysis in flight per user: refuse new input while a job waits.
+  const { count: activeJobs } = await createServiceRoleClient()
+    .from("analysis_jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .in("status", ["queued", "processing"]);
+  if ((activeJobs ?? 0) > 0) {
+    return NextResponse.json(
+      {
+        error:
+          "Analisis rekaman Anda sebelumnya masih dalam antrean. Tunggu notifikasi selesai sebelum merekam lagi.",
+      },
+      { status: 409 },
+    );
   }
 
   const form = await request.formData();
@@ -35,6 +53,21 @@ export async function POST(request: Request) {
   const environment = String(form.get("environment") ?? "ceo-stage");
   const durationSeconds = Number(form.get("durationSeconds")) || null;
   const moduleSlug = form.get("moduleSlug");
+
+  if (!durationSeconds || durationSeconds < MIN_DURATION_S) {
+    return NextResponse.json(
+      {
+        error: `Rekaman terlalu pendek. Bicaralah minimal ${MIN_DURATION_S} detik agar AI bisa menilai Anda.`,
+      },
+      { status: 400 },
+    );
+  }
+  if (durationSeconds > MAX_DURATION_S) {
+    return NextResponse.json(
+      { error: "Rekaman melebihi batas maksimal 5 menit." },
+      { status: 400 },
+    );
+  }
 
   let moduleId: string | null = null;
   if (typeof moduleSlug === "string" && moduleSlug) {

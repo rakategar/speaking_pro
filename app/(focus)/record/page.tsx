@@ -1,14 +1,20 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useRecorder } from "@/components/recording/useRecorder";
 import { Soundwave } from "@/components/recording/Soundwave";
 import { ENVIRONMENTS } from "@/components/recording/environments";
+import { EnablePush } from "@/components/push/EnablePush";
 import { cn } from "@/lib/utils";
 
-type Phase = "studio" | "uploading" | "analyzing" | "failed";
+type Phase = "studio" | "uploading" | "queued" | "failed";
+
+type QueueInfo = { active: boolean; position?: number; recordingId?: string };
+
+const MIN_SECONDS = 15;
 
 function formatTime(total: number) {
   const m = Math.floor(total / 60)
@@ -28,8 +34,8 @@ const STEPS = [
     body: "Sampaikan materi Anda dengan percaya diri di depan audiens virtual.",
   },
   {
-    title: "03. Evaluasi Instan",
-    body: "AI mentranskrip lalu menilai struktur bahasa dan intonasi Anda.",
+    title: "03. Masuk Antrean AI",
+    body: "Rekaman masuk antrean analisis — Anda akan diberi notifikasi begitu rapor selesai, tanpa perlu menunggu.",
   },
 ];
 
@@ -42,16 +48,40 @@ function RecordingStudio() {
   const [envSlug, setEnvSlug] = useState(ENVIRONMENTS[0].slug);
   const [phase, setPhase] = useState<Phase>("studio");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [queuePos, setQueuePos] = useState<number | null>(null);
+  const [pendingQueue, setPendingQueue] = useState<QueueInfo | null>(null);
 
   const env = ENVIRONMENTS.find((e) => e.slug === envSlug) ?? ENVIRONMENTS[0];
   const isLive = recorder.status === "recording" || recorder.status === "paused";
-  const busy = phase === "uploading" || phase === "analyzing";
+  const busy = phase === "uploading" || phase === "queued";
+
+  // One analysis at a time: while the user still has a job in the queue,
+  // recording is blocked. Poll so the page unblocks by itself when done.
+  useEffect(() => {
+    let stop = false;
+    async function check() {
+      try {
+        const res = await fetch("/api/queue");
+        if (!res.ok) return;
+        const info: QueueInfo = await res.json();
+        if (!stop) setPendingQueue(info.active ? info : null);
+      } catch {
+        /* offline etc. -- leave state as is */
+      }
+    }
+    check();
+    const t = setInterval(check, 10_000);
+    return () => {
+      stop = true;
+      clearInterval(t);
+    };
+  }, [phase]);
 
   const handleStopAndReview = useCallback(async () => {
     const durationSeconds = recorder.seconds;
-    if (durationSeconds < 10) {
+    if (durationSeconds < MIN_SECONDS) {
       setErrorMsg(
-        "Rekaman terlalu pendek. Bicaralah minimal 10 detik agar AI bisa menilai struktur bahasa dan intonasi Anda.",
+        `Rekaman terlalu pendek. Bicaralah minimal ${MIN_SECONDS} detik agar AI bisa menilai struktur bahasa dan intonasi Anda.`,
       );
       return;
     }
@@ -81,22 +111,39 @@ function RecordingStudio() {
       const uploadJson = await uploadRes.json();
       if (!uploadRes.ok) throw new Error(uploadJson.error ?? "Upload gagal");
 
-      setPhase("analyzing");
       const analyzeRes = await fetch(
         `/api/recordings/${uploadJson.id}/analyze`,
         { method: "POST" },
       );
       const analyzeJson = await analyzeRes.json();
       if (!analyzeRes.ok) {
-        throw new Error(analyzeJson.error ?? "Analisis gagal");
+        throw new Error(analyzeJson.error ?? "Gagal masuk antrean analisis");
       }
 
-      router.push(`/report/${uploadJson.id}`);
+      // Recording is now in the analysis queue -- no waiting here.
+      setQueuePos(analyzeJson.position ?? null);
+      setPhase("queued");
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Terjadi kesalahan.");
       setPhase("failed");
     }
-  }, [recorder, envSlug, moduleSlug, router]);
+  }, [recorder, envSlug, moduleSlug]);
+
+  // Hard cap: the recorder pauses itself at 5 minutes; submit automatically
+  // so the user can't keep going past the limit.
+  const autoSubmitted = useRef(false);
+  useEffect(() => {
+    if (
+      isLive &&
+      phase === "studio" &&
+      recorder.seconds >= recorder.maxSeconds &&
+      !autoSubmitted.current
+    ) {
+      autoSubmitted.current = true;
+      setErrorMsg("Batas 5 menit tercapai — rekaman dikirim otomatis.");
+      handleStopAndReview();
+    }
+  }, [isLive, phase, recorder.seconds, recorder.maxSeconds, handleStopAndReview]);
 
   return (
     <main className="flex-1 flex flex-col items-center justify-center px-margin-mobile py-8 relative w-full max-w-lg mx-auto pb-24 min-h-screen">
@@ -131,8 +178,8 @@ function RecordingStudio() {
         </div>
         <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/60 mt-2">
           {isLive
-            ? "Recording Session • Limit 05:00"
-            : "Siap Merekam • Limit 05:00"}
+            ? "Recording Session • Min 00:15 • Maks 05:00"
+            : "Siap Merekam • Min 00:15 • Maks 05:00"}
         </span>
       </div>
 
@@ -254,7 +301,8 @@ function RecordingStudio() {
               <button
                 type="button"
                 onClick={handleStopAndReview}
-                className="flex-1 h-14 rounded-full bg-primary-container text-on-primary font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                disabled={recorder.seconds < MIN_SECONDS}
+                className="flex-1 h-14 rounded-full bg-primary-container text-on-primary font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 <span
                   className="material-symbols-outlined text-[24px]"
@@ -262,7 +310,9 @@ function RecordingStudio() {
                 >
                   stop_circle
                 </span>
-                Stop &amp; Review
+                {recorder.seconds < MIN_SECONDS
+                  ? `Stop (min. ${MIN_SECONDS - recorder.seconds} dtk lagi)`
+                  : "Stop & Review"}
               </button>
             </>
           ) : (
@@ -317,23 +367,103 @@ function RecordingStudio() {
         </div>
       </div>
 
-      {/* Processing overlay */}
-      {busy && (
+      {/* Uploading overlay */}
+      {phase === "uploading" && (
         <div className="fixed inset-0 z-50 bg-primary-container/90 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-10 text-center">
           <div className="text-light-aqua">
             <Soundwave />
           </div>
           <div>
             <p className="text-white font-heading text-title-lg font-bold">
-              {phase === "uploading"
-                ? "Mengunggah rekaman..."
-                : "AI sedang menganalisis..."}
+              Mengunggah rekaman...
             </p>
             <p className="text-white/60 text-sm mt-2">
-              {phase === "uploading"
-                ? "Menyimpan audio Anda dengan aman."
-                : "Transkripsi, struktur bahasa, dan intonasi sedang dinilai. Ini bisa memakan waktu ±1 menit."}
+              Menyimpan audio Anda dengan aman.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Queued (submitted) overlay -- no waiting: results come later */}
+      {phase === "queued" && (
+        <div className="fixed inset-0 z-50 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center">
+          <div className="w-20 h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
+            <span className="material-symbols-outlined text-light-aqua text-[40px]">
+              schedule_send
+            </span>
+          </div>
+          <div>
+            <p className="text-white font-heading text-title-lg font-bold">
+              Masuk Antrean Analisis
+            </p>
+            <p className="text-white/70 text-sm mt-2 max-w-sm">
+              Rekaman Anda ada di{" "}
+              <span className="font-bold text-light-aqua">
+                antrean #{queuePos ?? "-"}
+              </span>
+              . Anda tidak perlu menunggu di halaman ini — hasilnya bisa
+              dilihat di Riwayat begitu selesai.
+            </p>
+          </div>
+          <EnablePush className="w-full max-w-xs" />
+          <div className="flex flex-col gap-3 w-full max-w-xs">
+            <Link
+              href="/history"
+              className="h-12 rounded-full bg-white text-primary-container font-semibold flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                history
+              </span>
+              Lihat Antrean di Riwayat
+            </Link>
+            <Link
+              href="/dashboard"
+              className="h-12 rounded-full border border-white/30 text-white font-semibold flex items-center justify-center"
+            >
+              Kembali ke Dashboard
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Blocked: a previous analysis is still in the queue */}
+      {phase === "studio" && pendingQueue?.active && (
+        <div className="fixed inset-0 z-40 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center">
+          <div className="w-20 h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
+            <span className="material-symbols-outlined text-light-aqua text-[40px]">
+              hourglass_top
+            </span>
+          </div>
+          <div>
+            <p className="text-white font-heading text-title-lg font-bold">
+              Analisis Sebelumnya Masih Diproses
+            </p>
+            <p className="text-white/70 text-sm mt-2 max-w-sm">
+              Rekaman Anda masih dalam{" "}
+              <span className="font-bold text-light-aqua">
+                antrean #{pendingQueue.position ?? "-"}
+              </span>
+              . Anda bisa merekam lagi setelah analisis ini selesai — halaman
+              ini akan terbuka otomatis.
+            </p>
+          </div>
+          <EnablePush className="w-full max-w-xs" />
+          <div className="flex flex-col gap-3 w-full max-w-xs">
+            <Link
+              href="/history"
+              className="h-12 rounded-full bg-white text-primary-container font-semibold flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                history
+              </span>
+              Lihat Riwayat
+            </Link>
+            <Link
+              href="/dashboard"
+              className="h-12 rounded-full border border-white/30 text-white font-semibold flex items-center justify-center"
+            >
+              Kembali ke Dashboard
+            </Link>
           </div>
         </div>
       )}

@@ -14,6 +14,120 @@ export type Database = {
   }
   public: {
     Tables: {
+      analysis_metrics: {
+        Row: {
+          id: string
+          recording_id: string | null
+          user_id: string | null
+          status: string
+          error: string | null
+          audio_bytes: number | null
+          duration_seconds: number | null
+          asr_ms: number | null
+          prosody_ms: number | null
+          llm_ms: number | null
+          total_ms: number | null
+          asr_model: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          recording_id?: string | null
+          user_id?: string | null
+          status: string
+          error?: string | null
+          audio_bytes?: number | null
+          duration_seconds?: number | null
+          asr_ms?: number | null
+          prosody_ms?: number | null
+          llm_ms?: number | null
+          total_ms?: number | null
+          asr_model?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          recording_id?: string | null
+          user_id?: string | null
+          status?: string
+          error?: string | null
+          audio_bytes?: number | null
+          duration_seconds?: number | null
+          asr_ms?: number | null
+          prosody_ms?: number | null
+          llm_ms?: number | null
+          total_ms?: number | null
+          asr_model?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      analysis_jobs: {
+        Row: {
+          id: string
+          recording_id: string
+          user_id: string
+          status: string
+          attempts: number
+          last_error: string | null
+          next_attempt_at: string
+          started_at: string | null
+          finished_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          recording_id: string
+          user_id: string
+          status?: string
+          attempts?: number
+          last_error?: string | null
+          next_attempt_at?: string
+          started_at?: string | null
+          finished_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          recording_id?: string
+          user_id?: string
+          status?: string
+          attempts?: number
+          last_error?: string | null
+          next_attempt_at?: string
+          started_at?: string | null
+          finished_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           created_at: string

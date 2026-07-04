@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ENVIRONMENTS } from "@/components/recording/environments";
+import { EnablePush } from "@/components/push/EnablePush";
 import { cn } from "@/lib/utils";
 
 type Item = {
@@ -21,10 +22,14 @@ const STATUS_LABEL: Record<string, { text: string; className: string }> = {
   analyzed: { text: "Selesai", className: "bg-secondary-fixed/60 text-on-secondary-fixed" },
   drill_completed: { text: "Drill", className: "bg-tertiary-fixed/40 text-on-tertiary-fixed" },
   failed: { text: "Gagal", className: "bg-error-container text-on-error-container" },
-  analyzing: { text: "Dianalisis", className: "bg-surface-container text-on-surface-variant" },
+  queued: { text: "Dalam Antrean", className: "bg-tertiary-container/60 text-on-tertiary-container" },
+  analyzing: { text: "Sedang Dianalisis", className: "bg-tertiary-container/60 text-on-tertiary-container" },
   uploaded: { text: "Terunggah", className: "bg-surface-container text-on-surface-variant" },
   uploading: { text: "Mengunggah", className: "bg-surface-container text-on-surface-variant" },
 };
+
+// Statuses that will still change on their own -- keep the list fresh.
+const PENDING = new Set(["queued", "analyzing", "uploaded", "uploading"]);
 
 function scoreColor(score: number): string {
   if (score >= 80) return "text-secondary-container";
@@ -37,6 +42,17 @@ export function HistoryList({ items: initial }: { items: Item[] }) {
   const [items, setItems] = useState(initial);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+
+  // Server component re-renders bring fresh statuses; poll while any
+  // recording is still queued/being analyzed.
+  const hasPending = initial.some((i) => PENDING.has(i.status));
+  useEffect(() => {
+    setItems(initial);
+    if (!hasPending) return;
+    const t = setInterval(() => router.refresh(), 10_000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial, hasPending]);
 
   async function remove(id: string) {
     setDeleting(id);
@@ -81,6 +97,20 @@ export function HistoryList({ items: initial }: { items: Item[] }) {
 
   return (
     <div className="flex flex-col gap-bento-gap">
+      {hasPending && (
+        <div className="bg-tertiary-container/40 border border-tertiary/20 rounded-2xl p-4 flex flex-col gap-3">
+          <div className="flex items-center gap-2 text-on-tertiary-container">
+            <span className="material-symbols-outlined text-[20px] animate-spin [animation-duration:2.5s]">
+              progress_activity
+            </span>
+            <p className="text-label-md font-label-md">
+              Ada rekaman dalam antrean analisis. Halaman ini diperbarui
+              otomatis — atau aktifkan notifikasi agar dikabari saat selesai.
+            </p>
+          </div>
+          <EnablePush />
+        </div>
+      )}
       {items.map((item) => {
         const status = STATUS_LABEL[item.status] ?? {
           text: item.status,

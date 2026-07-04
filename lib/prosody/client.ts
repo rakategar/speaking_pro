@@ -1,3 +1,5 @@
+import http from "node:http";
+
 export type ProsodyFeatures = {
   pitch_mean: number;
   pitch_variance: number;
@@ -45,6 +47,62 @@ export function scoreFromFeatures(f: ProsodyFeatures): number {
   return Math.round(Math.max(0, Math.min(100, combined)));
 }
 
+// The prosody service sends no response headers until librosa finishes,
+// and with the single-core serial queue that can take minutes. Both Node's
+// built-in fetch and the undici package abort such responses after ~300s
+// (headersTimeout) no matter what AbortSignal says, so speak plain
+// node:http where the only deadline is our own timeout below.
+const PROSODY_TIMEOUT_MS = 540_000; // must stay below nginx proxy_read_timeout (600s)
+
+function postMultipart(
+  target: string,
+  file: Buffer,
+): Promise<{ status: number; body: string }> {
+  const boundary = `----prosody${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+  const head = Buffer.from(
+    `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="file"; filename="recording.webm"\r\n` +
+      `Content-Type: audio/webm\r\n\r\n`,
+  );
+  const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
+  const payload = Buffer.concat([head, file, tail]);
+
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      target,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": `multipart/form-data; boundary=${boundary}`,
+          "Content-Length": payload.length,
+          ...(process.env.PROSODY_SERVICE_SECRET
+            ? { Authorization: `Bearer ${process.env.PROSODY_SERVICE_SECRET}` }
+            : {}),
+        },
+        timeout: PROSODY_TIMEOUT_MS,
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () =>
+          resolve({
+            status: res.statusCode ?? 0,
+            body: Buffer.concat(chunks).toString("utf8"),
+          }),
+        );
+        res.on("error", reject);
+      },
+    );
+    // "timeout" fires on socket inactivity; the service stays silent while
+    // the request waits in its queue, so treat it as a hard deadline.
+    req.on("timeout", () => {
+      req.destroy(new Error(`timeout ${PROSODY_TIMEOUT_MS}ms`));
+    });
+    req.on("error", reject);
+    req.end(payload);
+  });
+}
+
 /**
  * Send audio to the Python prosody microservice (services/prosody).
  * Requires PROSODY_SERVICE_URL and a reachable service -- no fixture mode.
@@ -57,28 +115,21 @@ export async function analyzeProsody(audio: Blob): Promise<ProsodyResult> {
     );
   }
 
-  const form = new FormData();
-  form.append("file", audio, "recording.webm");
-
-  let res: Response;
+  let res: { status: number; body: string };
   try {
-    res = await fetch(`${url.replace(/\/$/, "")}/analyze`, {
-      method: "POST",
-      headers: process.env.PROSODY_SERVICE_SECRET
-        ? { Authorization: `Bearer ${process.env.PROSODY_SERVICE_SECRET}` }
-        : undefined,
-      body: form,
-      signal: AbortSignal.timeout(60_000),
-    });
+    res = await postMultipart(
+      `${url.replace(/\/$/, "")}/analyze`,
+      Buffer.from(await audio.arrayBuffer()),
+    );
   } catch (error) {
     throw new Error(
       `Layanan analisis intonasi tidak dapat dihubungi: ${String(error)}`,
     );
   }
-  if (!res.ok) {
-    throw new Error(`prosody service ${res.status}: ${await res.text()}`);
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`prosody service ${res.status}: ${res.body.slice(0, 300)}`);
   }
-  const features = (await res.json()) as ProsodyFeatures;
+  const features = JSON.parse(res.body) as ProsodyFeatures;
   return {
     intonation_score: scoreFromFeatures(features),
     features,
