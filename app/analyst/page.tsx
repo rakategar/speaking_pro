@@ -183,6 +183,179 @@ function CoachFeedbackSection() {
   );
 }
 
+type SubscriptionItem = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  subscription_tier: string;
+  subscription_renews_at: string | null;
+  created_at: string;
+};
+
+// Subscription management: activate (premium, +30 days) or deactivate
+// (back to free) any user's subscription manually.
+function SubscriptionSection() {
+  const [items, setItems] = useState<SubscriptionItem[]>([]);
+  const [query, setQuery] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    const res = await fetch("/api/analyst/subscriptions", { cache: "no-store" });
+    if (!res.ok) return;
+    const json = await res.json();
+    setItems(json.items ?? []);
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function toggle(user: SubscriptionItem) {
+    const action =
+      user.subscription_tier === "premium" ? "deactivate" : "activate";
+    if (
+      action === "deactivate" &&
+      !window.confirm(`Nonaktifkan langganan ${user.email}?`)
+    )
+      return;
+    setBusyId(user.id);
+    setError("");
+    try {
+      const res = await fetch("/api/analyst/subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, action }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setError(json.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      await load();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? items.filter(
+        (u) =>
+          u.email.toLowerCase().includes(q) ||
+          (u.full_name ?? "").toLowerCase().includes(q),
+      )
+    : items;
+  const premiumCount = items.filter(
+    (u) => u.subscription_tier === "premium",
+  ).length;
+
+  return (
+    <section>
+      <h2 className="mb-3 text-lg font-bold text-primary">
+        Manajemen Langganan{" "}
+        <span className="text-sm font-normal text-text-secondary">
+          ({premiumCount} premium / {items.length} user)
+        </span>
+      </h2>
+      <div className="rounded-2xl border border-stroke-subtle bg-surface-card shadow-soft">
+        <div className="flex flex-wrap items-center gap-3 border-b border-stroke-subtle p-3">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari nama / email..."
+            className="w-full max-w-xs rounded-xl border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary-container/30"
+          />
+          {error && <p className="text-sm text-red-500">{error}</p>}
+        </div>
+        <div className="max-h-96 overflow-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="sticky top-0 border-b border-stroke-subtle bg-surface-card text-xs text-text-secondary">
+              <tr>
+                {["user", "status", "berlaku s.d.", "daftar", "aksi"].map((h) => (
+                  <th key={h} className="px-3 py-2 font-semibold">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((u) => (
+                <tr key={u.id} className="border-b border-stroke-subtle/50">
+                  <td className="px-3 py-2">
+                    <p className="font-semibold text-primary">
+                      {u.full_name ?? "(tanpa nama)"}
+                    </p>
+                    <p className="font-mono text-xs text-text-secondary">
+                      {u.email}
+                    </p>
+                  </td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={
+                        u.subscription_tier === "premium"
+                          ? "rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700"
+                          : "rounded-full bg-surface-container px-2 py-0.5 text-xs font-semibold text-text-secondary"
+                      }
+                    >
+                      {u.subscription_tier === "premium"
+                        ? "Berlangganan"
+                        : "Belum Berlangganan"}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">
+                    {u.subscription_renews_at
+                      ? new Date(u.subscription_renews_at).toLocaleDateString(
+                          "id-ID",
+                          { day: "numeric", month: "short", year: "numeric" },
+                        )
+                      : "-"}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-text-secondary">
+                    {new Date(u.created_at).toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </td>
+                  <td className="px-3 py-2">
+                    <button
+                      onClick={() => toggle(u)}
+                      disabled={busyId === u.id}
+                      className={
+                        u.subscription_tier === "premium"
+                          ? "rounded-full border border-red-300 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40"
+                          : "rounded-full bg-primary-container px-3 py-1 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-40"
+                      }
+                    >
+                      {busyId === u.id
+                        ? "..."
+                        : u.subscription_tier === "premium"
+                          ? "Nonaktifkan"
+                          : "Aktifkan (30 hari)"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {!filtered.length && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-3 py-4 text-center text-text-secondary"
+                  >
+                    {items.length ? "Tidak ada yang cocok." : "Belum ada user."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function LogBox({ title, text }: { title: string; text: string }) {
   return (
     <div className="rounded-2xl border border-stroke-subtle bg-surface-card p-4 shadow-soft">
@@ -430,6 +603,9 @@ export default function AnalystPage() {
             </table>
           </div>
         </section>
+
+        {/* ---- subscription management ---- */}
+        <SubscriptionSection />
 
         {/* ---- coach feedback ---- */}
         <CoachFeedbackSection />
