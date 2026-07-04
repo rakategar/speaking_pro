@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/profile/SignOutButton";
+import { InstallPwa } from "@/components/pwa/InstallPwa";
 
 export const dynamic = "force-dynamic";
 
@@ -155,7 +156,7 @@ export default async function ProfilePage() {
   ];
 
   return (
-    <div className="w-full max-w-md mx-auto relative pb-32">
+    <div className="w-full max-w-md mx-auto relative">
       <header className="fixed top-0 inset-x-0 z-50 bg-background/80 backdrop-blur-xl">
         <div className="flex items-center justify-between px-margin-mobile py-4 w-full max-w-md mx-auto">
           <span className="font-headline-md text-headline-md-mobile text-headline-md text-primary font-bold">
@@ -316,11 +317,12 @@ export default async function ProfilePage() {
                 </Link>
               </li>
             ))}
+            <InstallPwa />
           </ul>
         </section>
 
         {/* Logout */}
-        <div className="pb-8 pt-2">
+        <div className="pt-2">
           <SignOutButton variant="outline" />
         </div>
       </main>

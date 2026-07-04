@@ -161,7 +161,7 @@ export default async function DashboardPage() {
       : null;
 
   return (
-    <div className="w-full max-w-md mx-auto relative pb-[120px]">
+    <div className="w-full max-w-md mx-auto relative">
       {/* TopAppBar: greeting variant */}
       <header className="fixed top-0 inset-x-0 z-50 bg-background/80 backdrop-blur-xl">
         <div className="flex items-center justify-between px-margin-mobile py-4 w-full max-w-md mx-auto">

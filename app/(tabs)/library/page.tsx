@@ -11,7 +11,7 @@ export default async function LibraryPage() {
     .order("created_at");
 
   return (
-    <div className="w-full max-w-md mx-auto relative pb-32">
+    <div className="w-full max-w-md mx-auto relative">
       <header className="fixed top-0 inset-x-0 z-50 bg-background/80 backdrop-blur-xl">
         <div className="flex items-center justify-between px-margin-mobile py-4 w-full max-w-md mx-auto">
           <h1 className="font-heading text-headline-md-mobile text-headline-md font-extrabold text-primary tracking-tight">

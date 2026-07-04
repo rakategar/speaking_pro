@@ -28,6 +28,14 @@ export function TopAppBar({
 }: TopAppBarProps) {
   const router = useRouter();
 
+  // router.back() is a no-op when the page is the first history entry
+  // (opened from a PWA launch, push notification, or a direct link) --
+  // fall back to the dashboard so the button always does something.
+  function goBack() {
+    if (window.history.length > 1) router.back();
+    else router.push("/dashboard");
+  }
+
   return (
     <header
       className={cn(
@@ -49,7 +57,7 @@ export function TopAppBar({
       ) : (
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={goBack}
           className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors active:scale-95 text-primary -ml-2"
           aria-label="Kembali"
         >

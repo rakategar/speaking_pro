@@ -150,7 +150,9 @@ function RecordingStudio() {
       {/* Close / back */}
       <button
         type="button"
-        onClick={() => router.back()}
+        onClick={() =>
+          window.history.length > 1 ? router.back() : router.push("/dashboard")
+        }
         className="absolute top-5 left-5 z-20 w-10 h-10 rounded-full bg-surface-card border border-stroke-subtle shadow-soft flex items-center justify-center text-on-surface-variant active:scale-95 transition"
         aria-label="Kembali"
         disabled={busy}
