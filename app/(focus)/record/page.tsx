@@ -382,7 +382,7 @@ function RecordingStudio() {
 
       {/* Uploading overlay */}
       {phase === "uploading" && (
-        <div className="fixed inset-0 z-50 bg-primary-container/90 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-10 text-center">
+        <div className="fixed inset-0 z-50 bg-primary-container/90 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-10 text-center overlay-in">
           <div className="text-light-aqua">
             <Soundwave />
           </div>
@@ -399,8 +399,8 @@ function RecordingStudio() {
 
       {/* Queued (submitted) overlay -- no waiting: results come later */}
       {phase === "queued" && (
-        <div className="fixed inset-0 z-50 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center">
-          <div className="w-20 h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
+          <div className="w-20 h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center pop-in">
             <span className="material-symbols-outlined text-light-aqua text-[40px]">
               schedule_send
             </span>
@@ -441,8 +441,8 @@ function RecordingStudio() {
 
       {/* Blocked: a previous analysis is still in the queue */}
       {phase === "studio" && pendingQueue?.active && (
-        <div className="fixed inset-0 z-40 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center">
-          <div className="w-20 h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
+        <div className="fixed inset-0 z-40 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
+          <div className="w-20 h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center pop-in">
             <span className="material-symbols-outlined text-light-aqua text-[40px]">
               hourglass_top
             </span>
