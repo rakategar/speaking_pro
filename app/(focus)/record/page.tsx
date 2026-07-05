@@ -174,7 +174,12 @@ function RecordingStudio() {
               pause_circle
             </span>
           )}
-          <span className="text-[40px] font-extrabold tracking-tight leading-none tabular-nums">
+          <span
+            className={cn(
+              "text-[40px] font-extrabold tracking-tight leading-none tabular-nums transition-colors duration-300",
+              recorder.status === "recording" && "rec-breathe",
+            )}
+          >
             {formatTime(recorder.seconds)}
           </span>
         </div>
@@ -194,7 +199,10 @@ function RecordingStudio() {
         >
           {/* Ambient scene icon */}
           <div className="absolute inset-0 flex items-end justify-center pb-24 opacity-20 pointer-events-none">
-            <span className="material-symbols-outlined text-white text-[160px]">
+            <span
+              key={env.slug}
+              className="material-symbols-outlined text-white text-[160px] float-slow pop-in"
+            >
               {env.icon}
             </span>
           </div>
@@ -282,7 +290,10 @@ function RecordingStudio() {
         </div>
 
         {/* Footer controls */}
-        <div className="p-6 flex items-center gap-4 bg-white">
+        <div
+          key={isLive ? "live" : "idle"}
+          className="p-6 flex items-center gap-4 bg-white rise"
+        >
           {isLive ? (
             <>
               <button
@@ -341,7 +352,7 @@ function RecordingStudio() {
       {(recorder.error || errorMsg) && (
         <p
           role="alert"
-          className="mt-4 w-full rounded-2xl bg-error-container text-on-error-container px-4 py-3 text-label-md font-label-md"
+          className="mt-4 w-full rounded-2xl bg-error-container text-on-error-container px-4 py-3 text-label-md font-label-md rise"
         >
           {recorder.error ?? errorMsg}
         </p>

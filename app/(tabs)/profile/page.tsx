@@ -164,7 +164,7 @@ export default async function ProfilePage() {
         </div>
       </header>
 
-      <main className="pt-[88px] px-margin-mobile flex flex-col gap-bento-gap">
+      <main className="pt-[88px] px-margin-mobile flex flex-col gap-bento-gap stagger">
         {/* Profile header */}
         <section className="bg-surface-card rounded-3xl shadow-soft flex flex-col items-center text-center relative overflow-hidden p-4 pb-6">
           <div className="absolute top-0 w-full h-32 bg-gradient-to-b from-secondary-container/10 to-transparent" />

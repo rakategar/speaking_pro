@@ -61,7 +61,7 @@ export default async function ReportPage({
   return (
     <div className="min-h-screen bg-background">
       <TopAppBar variant="back" title="Rapor Analisis" />
-      <main className="pt-24 px-margin-mobile max-w-3xl mx-auto space-y-bento-gap pb-16">
+      <main className="pt-24 px-margin-mobile max-w-3xl mx-auto space-y-bento-gap pb-16 stagger">
         {/* Header */}
         <div className="py-2">
           <h1 className="font-headline-lg-mobile text-headline-lg-mobile text-primary">

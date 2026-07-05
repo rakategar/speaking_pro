@@ -23,7 +23,7 @@ export default async function RenewSubscriptionPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-start overflow-x-hidden">
-      <main className="w-full max-w-md mx-auto px-margin-mobile flex-1 flex flex-col gap-bento-gap relative z-10 pt-8 pb-40">
+      <main className="w-full max-w-md mx-auto px-margin-mobile flex-1 flex flex-col gap-bento-gap relative z-10 pt-8 pb-40 stagger">
         {/* Header */}
         <header className="w-full flex justify-between items-center mb-4">
           <BackButton />

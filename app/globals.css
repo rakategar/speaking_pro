@@ -158,6 +158,129 @@ html.fonts-loaded .material-symbols-outlined {
   }
 }
 
+/* ---------------------------------------------------------------------
+   Motion system. Page fades are opacity-only: a transform on the page
+   wrapper would turn it into the containing block for the fixed headers/
+   overlays inside pages and make them jump. Card-level motion (.stagger,
+   .rise) is safe because those elements have no fixed descendants. */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+  }
+}
+.page-enter {
+  animation: page-enter 0.3s ease-out;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* Staggered entrance for a container's direct children (cards, sections). */
+.stagger > * {
+  animation: rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger > *:nth-child(1) {
+  animation-delay: 0.02s;
+}
+.stagger > *:nth-child(2) {
+  animation-delay: 0.07s;
+}
+.stagger > *:nth-child(3) {
+  animation-delay: 0.12s;
+}
+.stagger > *:nth-child(4) {
+  animation-delay: 0.17s;
+}
+.stagger > *:nth-child(5) {
+  animation-delay: 0.22s;
+}
+.stagger > *:nth-child(6) {
+  animation-delay: 0.27s;
+}
+.stagger > *:nth-child(7) {
+  animation-delay: 0.32s;
+}
+.stagger > *:nth-child(n + 8) {
+  animation-delay: 0.36s;
+}
+
+/* Full-screen overlays (upload/queue states): fade the fixed backdrop
+   (opacity only), pop the content inside it. */
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+.overlay-in {
+  animation: overlay-in 0.25s ease-out;
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.pop-in {
+  animation: pop-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Recording ambience: slow float for the scene icon, gentle breathing
+   for the live timer. */
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+.float-slow {
+  animation: float-slow 5s ease-in-out infinite;
+}
+@keyframes rec-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+.rec-breathe {
+  animation: rec-breathe 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .rise,
+  .stagger > *,
+  .overlay-in,
+  .pop-in,
+  .float-slow,
+  .rec-breathe,
+  .glow-cyan-active,
+  .breath-indicator-animation,
+  .animate-progress,
+  .bar {
+    animation: none !important;
+  }
+}
+
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }

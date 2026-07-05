@@ -33,7 +33,7 @@ export default async function HistoryPage() {
   return (
     <div className="min-h-screen bg-background">
       <TopAppBar variant="back" title="Riwayat Latihan" />
-      <main className="pt-24 pb-16 px-margin-mobile max-w-lg mx-auto">
+      <main className="pt-24 pb-16 px-margin-mobile max-w-lg mx-auto stagger">
         <HistoryList items={items} />
       </main>
     </div>

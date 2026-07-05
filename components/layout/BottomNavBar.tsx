@@ -31,7 +31,7 @@ export function BottomNavBar() {
             key={tab.href}
             href={tab.href}
             className={cn(
-              "flex items-center justify-center p-3 rounded-full transition-colors active:scale-90",
+              "flex items-center justify-center p-3 rounded-full transition-all duration-300 ease-out active:scale-90",
               active
                 ? "bg-secondary-container text-on-primary shadow-[0_0_20px_rgba(0,163,255,0.6)]"
                 : "text-on-primary/60 hover:bg-white/10",
@@ -39,7 +39,10 @@ export function BottomNavBar() {
             aria-label={tab.label}
           >
             <span
-              className="material-symbols-outlined"
+              className={cn(
+                "material-symbols-outlined transition-transform duration-300 ease-out",
+                active && "scale-110",
+              )}
               style={{ fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0" }}
             >
               {tab.icon}

@@ -199,7 +199,7 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <main className="px-margin-mobile pt-24 flex flex-col gap-bento-gap">
+      <main className="px-margin-mobile pt-24 flex flex-col gap-bento-gap stagger">
         {/* Hero: personalized daily drill menu */}
         <div className="bg-surface-container-lowest border border-stroke-subtle bento-card rounded-3xl p-6 flex flex-col gap-5">
           <div className="flex justify-between items-start">
