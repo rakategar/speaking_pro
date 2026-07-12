@@ -15,6 +15,11 @@ const PUBLIC_PATHS = [
   "/icons",
 ];
 
+// Exempt from the onboarding gate below: the questionnaire page itself and
+// the endpoint it submits to (which flips onboarding_completed to true).
+const ONBOARDING_PATH = "/onboarding";
+const ONBOARDING_API_PATH = "/api/onboarding";
+
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
@@ -65,6 +70,32 @@ export async function updateSession(request: NextRequest) {
     url.pathname = "/dashboard";
     url.search = "";
     return NextResponse.redirect(url);
+  }
+
+  if (user && !isPublicPath(pathname)) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarding_completed")
+      .eq("id", user.id)
+      .maybeSingle();
+    const onboarded = profile?.onboarding_completed ?? false;
+
+    if (
+      !onboarded &&
+      pathname !== ONBOARDING_PATH &&
+      pathname !== ONBOARDING_API_PATH
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = ONBOARDING_PATH;
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+    if (onboarded && pathname === ONBOARDING_PATH) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

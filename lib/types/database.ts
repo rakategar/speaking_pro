@@ -313,6 +313,8 @@ export type Database = {
           full_name: string | null
           id: string
           occupation: string | null
+          onboarding_answers: Json
+          onboarding_completed: boolean
           streak_count: number
           subscription_renews_at: string | null
           subscription_tier: string
@@ -323,6 +325,8 @@ export type Database = {
           full_name?: string | null
           id: string
           occupation?: string | null
+          onboarding_answers?: Json
+          onboarding_completed?: boolean
           streak_count?: number
           subscription_renews_at?: string | null
           subscription_tier?: string
@@ -333,6 +337,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           occupation?: string | null
+          onboarding_answers?: Json
+          onboarding_completed?: boolean
           streak_count?: number
           subscription_renews_at?: string | null
           subscription_tier?: string
