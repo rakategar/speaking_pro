@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { activatePremium } from "@/lib/subscription/activate";
 
 // POST /api/checkout/mock-pay -- stub payment gateway. Always succeeds
 // after a simulated round-trip; swapping in Midtrans/Xendit later only
@@ -72,13 +73,7 @@ export async function POST(request: Request) {
   if (product.type === "subscription") {
     const renewsAt = new Date();
     renewsAt.setDate(renewsAt.getDate() + 30);
-    await supabase
-      .from("profiles")
-      .update({
-        subscription_tier: "premium",
-        subscription_renews_at: renewsAt.toISOString(),
-      })
-      .eq("id", user.id);
+    await activatePremium(supabase, user.id, renewsAt);
   }
 
   return NextResponse.json({

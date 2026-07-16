@@ -350,6 +350,7 @@ export type Database = {
           onboarding_completed: boolean
           streak_count: number
           subscription_renews_at: string | null
+          subscription_started_at: string | null
           subscription_tier: string
           trial_ends_at: string | null
           trial_nudges_seen: Json
@@ -365,6 +366,7 @@ export type Database = {
           onboarding_completed?: boolean
           streak_count?: number
           subscription_renews_at?: string | null
+          subscription_started_at?: string | null
           subscription_tier?: string
           trial_ends_at?: string | null
           trial_nudges_seen?: Json
@@ -380,10 +382,80 @@ export type Database = {
           onboarding_completed?: boolean
           streak_count?: number
           subscription_renews_at?: string | null
+          subscription_started_at?: string | null
           subscription_tier?: string
           trial_ends_at?: string | null
           trial_nudges_seen?: Json
           trial_started_at?: string | null
+        }
+        Relationships: []
+      }
+      weekly_summaries: {
+        Row: {
+          id: string
+          user_id: string
+          week_index: number
+          period_start: string
+          period_end: string
+          storage_path: string
+          session_count: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          week_index: number
+          period_start: string
+          period_end: string
+          storage_path: string
+          session_count?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          week_index?: number
+          period_start?: string
+          period_end?: string
+          storage_path?: string
+          session_count?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      monthly_certificates: {
+        Row: {
+          id: string
+          user_id: string
+          period_start: string
+          period_end: string
+          storage_path: string
+          session_count: number
+          average_score: number | null
+          badge_tier: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          period_start: string
+          period_end: string
+          storage_path: string
+          session_count?: number
+          average_score?: number | null
+          badge_tier: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          period_start?: string
+          period_end?: string
+          storage_path?: string
+          session_count?: number
+          average_score?: number | null
+          badge_tier?: string
+          created_at?: string
         }
         Relationships: []
       }

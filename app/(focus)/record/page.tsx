@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useRecorder } from "@/components/recording/useRecorder";
@@ -77,11 +78,17 @@ function RecordingStudio() {
   const [reviewBlob, setReviewBlob] = useState<Blob | null>(null);
   const [reviewUrl, setReviewUrl] = useState<string | null>(null);
   const [reviewSeconds, setReviewSeconds] = useState(0);
+  // Environments with a photo that 404s/fails to load fall back to their
+  // gradient -- tracked per-slug so a failure is remembered, not retried.
+  const [imageFailed, setImageFailed] = useState<Record<string, boolean>>({});
 
   const env = ENVIRONMENTS.find((e) => e.slug === envSlug) ?? ENVIRONMENTS[0];
   const isLive = recorder.status === "recording" || recorder.status === "paused";
   const busy =
     phase === "uploading" || phase === "queued" || phase === "review";
+  // Narrower than `busy`: only block back-navigation while a network
+  // operation is actually in flight, not during review/playback.
+  const navBackDisabled = phase === "uploading" || phase === "queued";
 
   // Release the object URL when it's replaced or the page unmounts.
   useEffect(() => {
@@ -210,13 +217,13 @@ function RecordingStudio() {
   }, [isLive, phase, recorder.seconds, recorder.maxSeconds, handleStop]);
 
   return (
-    <main className="flex-1 flex flex-col items-center px-margin-mobile pt-24 pb-24 relative w-full max-w-lg mx-auto">
+    <main className="flex-1 flex flex-col items-center px-margin-mobile pt-32 pb-24 relative w-full max-w-lg mx-auto">
       {/* Shared navbar, consistent with the other recording views; back is
           blocked while an upload/queue is in flight. */}
       <TopAppBar
         variant="back"
         title="Studio Rekaman"
-        backDisabled={busy}
+        backDisabled={navBackDisabled}
       />
 
       {/* Timer header */}
@@ -256,15 +263,28 @@ function RecordingStudio() {
           className="relative w-full overflow-hidden aspect-[3/4] transition-[background] duration-500"
           style={{ background: env.background }}
         >
-          {/* Ambient scene icon */}
-          <div className="absolute inset-0 flex items-end justify-center pb-24 opacity-20 pointer-events-none">
-            <span
+          {env.image && !imageFailed[env.slug] ? (
+            <Image
               key={env.slug}
-              className="material-symbols-outlined text-white text-[160px] float-slow pop-in"
-            >
-              {env.icon}
-            </span>
-          </div>
+              src={env.image}
+              alt=""
+              fill
+              className="object-cover"
+              onError={() =>
+                setImageFailed((f) => ({ ...f, [env.slug]: true }))
+              }
+            />
+          ) : (
+            /* Ambient scene icon -- gradient-only fallback decoration */
+            <div className="absolute inset-0 flex items-end justify-center pb-24 opacity-20 pointer-events-none">
+              <span
+                key={env.slug}
+                className="material-symbols-outlined text-white text-[160px] float-slow pop-in"
+              >
+                {env.icon}
+              </span>
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40 pointer-events-none" />
 
           {/* Privacy badge */}

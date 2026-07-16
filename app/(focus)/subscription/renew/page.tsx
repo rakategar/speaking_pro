@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { BackButton } from "@/components/ui/BackButton";
 import { FaisalAvatar } from "@/components/ui/FaisalAvatar";
+import { Logo } from "@/components/ui/Logo";
 import { formatRupiah } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,11 @@ export default async function RenewSubscriptionPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-start overflow-x-hidden">
       <main className="w-full max-w-md mx-auto px-margin-mobile flex-1 flex flex-col gap-bento-gap relative z-10 pt-8 pb-40 stagger">
+        {/* Brand strip: same logo, same size, as every other header. */}
+        <div className="w-full flex items-center justify-center py-1.5 -mt-4 mb-2 border-b border-stroke-subtle/30">
+          <Logo className="h-5 w-auto" />
+        </div>
+
         {/* Header */}
         <header className="w-full flex justify-between items-center mb-4">
           <BackButton />

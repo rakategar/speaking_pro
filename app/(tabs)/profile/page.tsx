@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/profile/SignOutButton";
 import { InstallPwa } from "@/components/pwa/InstallPwa";
 import { SubscribeMenuItem } from "@/components/payment/SubscribeMenuItem";
+import { TopAppBar } from "@/components/layout/TopAppBar";
 
 export const dynamic = "force-dynamic";
 
@@ -152,26 +153,20 @@ export default async function ProfilePage() {
       subtitle: "FAQ, Panduan, Support & Lapor",
       toneAqua: true,
     },
+    {
+      href: "/summaries",
+      icon: "summarize",
+      title: "Ringkasan Mingguan",
+      subtitle: "Unduh laporan mingguan Anda",
+      toneAqua: false,
+    },
   ];
 
   return (
     <div className="w-full max-w-md mx-auto relative">
-      <header className="fixed top-0 inset-x-0 z-50 bg-background/80 backdrop-blur-xl">
-        <div className="flex items-center justify-between px-margin-mobile py-4 w-full max-w-md mx-auto">
-          <span className="font-headline-md text-headline-md-mobile text-headline-md text-primary font-bold">
-            Profile
-          </span>
-          <button
-            type="button"
-            className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center hover:opacity-80 active:scale-95 transition text-on-surface-variant"
-            aria-label="Notifikasi"
-          >
-            <span className="material-symbols-outlined">notifications</span>
-          </button>
-        </div>
-      </header>
+      <TopAppBar variant="transactional" title="Profile" showBack={false} />
 
-      <main className="pt-[88px] px-margin-mobile flex flex-col gap-bento-gap stagger">
+      <main className="pt-32 px-margin-mobile flex flex-col gap-bento-gap stagger">
         {/* Profile header */}
         <section className="bg-surface-card rounded-3xl shadow-soft flex flex-col items-center text-center relative overflow-hidden p-4 pb-6">
           <div className="absolute top-0 w-full h-32 bg-gradient-to-b from-secondary-container/10 to-transparent" />

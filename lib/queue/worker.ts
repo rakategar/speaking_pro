@@ -10,6 +10,8 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { runAnalysis, isPermanentAnalysisError } from "@/lib/analysis/pipeline";
 import { sendPushToUser } from "@/lib/push/send";
+import { generateWeeklySummaries } from "@/lib/queue/weeklySummary";
+import { generateMonthlyCertificates } from "@/lib/queue/monthlyCertificate";
 
 const POLL_MS = 3_000;
 const STALE_PROCESSING_MIN = 20; // reclaim jobs orphaned by a server restart
@@ -181,6 +183,8 @@ export function startWorker() {
           lastReclaim = Date.now();
           await reclaimStale();
           await sendDailyReminders();
+          await generateWeeklySummaries();
+          await generateMonthlyCertificates();
         }
         // Drain everything that is ready, then sleep.
         while (await processOne()) {

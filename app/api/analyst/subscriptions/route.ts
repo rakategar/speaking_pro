@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isAuthorized } from "@/lib/analyst/auth";
 import { listAnalystUsers } from "@/lib/analyst/users";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { activatePremium } from "@/lib/subscription/activate";
 import type { Database } from "@/lib/types/database";
 
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
@@ -45,15 +46,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let update: ProfileUpdate;
   if (action === "activate") {
-    update = {
-      subscription_tier: "premium",
-      subscription_renews_at: new Date(
-        Date.now() + days * 24 * 60 * 60 * 1000,
-      ).toISOString(),
-    };
-  } else if (action === "deactivate") {
+    // Uses the shared helper (sets subscription_started_at once, never on
+    // re-activation) instead of the generic `update` object below.
+    await activatePremium(
+      createServiceRoleClient(),
+      userId,
+      new Date(Date.now() + days * 24 * 60 * 60 * 1000),
+    );
+    return NextResponse.json({ ok: true });
+  }
+
+  let update: ProfileUpdate;
+  if (action === "deactivate") {
     update = { subscription_tier: "free", subscription_renews_at: null };
   } else if (action === "reset_trial") {
     // Fresh 7-day window (support/goodwill case for a lapsed free user).

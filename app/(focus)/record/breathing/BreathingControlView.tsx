@@ -93,7 +93,7 @@ export function BreathingControlView() {
   return (
     <div className="min-h-screen bg-background pb-16">
       <TopAppBar variant="back" title="Breathing Control" />
-      <main className="pt-24 px-margin-mobile flex flex-col items-center max-w-lg mx-auto">
+      <main className="pt-32 px-margin-mobile flex flex-col items-center max-w-lg mx-auto">
         {/* Breath indicator */}
         <div className="relative flex items-center justify-center w-full aspect-square mb-6 max-h-[360px]">
           <div className="absolute w-64 h-64 bg-secondary-container/20 rounded-full blur-3xl" />

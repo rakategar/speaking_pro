@@ -128,7 +128,7 @@ export function AiueoView() {
   return (
     <div className="min-h-screen bg-background pb-16">
       <TopAppBar variant="back" title="AIUEO Drill" />
-      <main className="pt-24 px-margin-mobile max-w-2xl mx-auto flex flex-col gap-8">
+      <main className="pt-32 px-margin-mobile max-w-2xl mx-auto flex flex-col gap-8">
         {/* Large letter display */}
         <div className="relative flex flex-col items-center justify-center py-12 px-6 bg-white rounded-3xl border border-stroke-subtle shadow-soft overflow-hidden">
           <div

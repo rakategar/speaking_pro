@@ -135,7 +135,7 @@ export function DrillPlayer({ config }: { config: DrillConfig }) {
   return (
     <div className="min-h-screen bg-background pb-16">
       <TopAppBar variant="back" title={config.title} />
-      <main className="pt-24 px-margin-mobile max-w-2xl mx-auto flex flex-col gap-bento-gap">
+      <main className="pt-32 px-margin-mobile max-w-2xl mx-auto flex flex-col gap-bento-gap">
         {/* Session timer + goal */}
         <div className="bg-white rounded-3xl border border-stroke-subtle shadow-soft p-4 flex items-center gap-4">
           <span className="font-heading font-extrabold text-[26px] text-primary tabular-nums shrink-0">

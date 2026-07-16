@@ -6,6 +6,7 @@ import {
   isPaidStatus,
   midtransConfigured,
 } from "@/lib/payments/midtrans";
+import { activatePremium } from "@/lib/subscription/activate";
 
 // POST /api/payments/subscription/status { orderId } -- re-check the order
 // against Midtrans and activate the subscription when paid. Called from the
@@ -56,13 +57,7 @@ export async function POST(request: Request) {
           payment_method: status.payment_type ?? "midtrans",
         })
         .eq("id", order.id);
-      await supabase
-        .from("profiles")
-        .update({
-          subscription_tier: "premium",
-          subscription_renews_at: renewsAt.toISOString(),
-        })
-        .eq("id", user.id);
+      await activatePremium(supabase, user.id, renewsAt);
     }
     return NextResponse.json({ status: "paid" });
   }

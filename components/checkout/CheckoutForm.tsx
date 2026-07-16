@@ -10,6 +10,7 @@ import {
 import { loadSnapJs } from "@/lib/payments/snap";
 import { formatRupiah } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { TopAppBar } from "@/components/layout/TopAppBar";
 
 type Product = {
   id: string;
@@ -200,25 +201,12 @@ export function CheckoutForm({ product }: { product: Product }) {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      {/* Transactional top bar */}
-      <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl flex items-center justify-between px-margin-mobile py-4">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="p-2 -ml-2 rounded-full hover:bg-surface-variant transition-colors active:scale-95 flex items-center justify-center"
-          aria-label="Kembali"
-        >
-          <span className="material-symbols-outlined text-on-surface">
-            arrow_back
-          </span>
-        </button>
-        <h1 className="font-title-lg text-title-lg text-primary text-center absolute left-1/2 -translate-x-1/2">
-          Checkout
-        </h1>
-        <div className="w-10" />
-      </header>
+      {/* Transactional top bar -- shared TopAppBar so back navigation always
+          has the history-length fallback (deep links / PWA launches into
+          checkout used to leave a dead back button here). */}
+      <TopAppBar variant="transactional" title="Checkout" />
 
-      <main className="pt-24 px-margin-mobile max-w-lg mx-auto flex flex-col gap-bento-gap">
+      <main className="pt-32 px-margin-mobile max-w-lg mx-auto flex flex-col gap-bento-gap">
         {/* Plan summary */}
         <section className="bento-card p-6 flex flex-col gap-4">
           <div className="flex items-start gap-4">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Logo } from "@/components/ui/Logo";
 
 type StageStat = {
   count: number;
@@ -1043,6 +1044,9 @@ export default function AnalystPage() {
           onSubmit={handleLogin}
           className="w-full max-w-sm rounded-3xl border border-stroke-subtle bg-surface-card p-8 shadow-soft"
         >
+          <div className="flex justify-center mb-4">
+            <Logo className="h-8 w-auto" />
+          </div>
           <h1 className="text-xl font-extrabold text-primary">Analyst Dashboard</h1>
           <p className="mt-1 text-sm text-text-secondary">
             Monitoring beban sistem &amp; pipeline analisis suara.
@@ -1096,6 +1100,9 @@ export default function AnalystPage() {
   return (
     <div className="min-h-screen bg-surface px-4 py-8">
       <div className="mx-auto max-w-6xl space-y-6">
+        <div className="flex items-center justify-center py-1.5 border-b border-stroke-subtle/30">
+          <Logo className="h-5 w-auto" />
+        </div>
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-extrabold text-primary">Analyst Dashboard</h1>

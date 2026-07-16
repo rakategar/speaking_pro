@@ -12,6 +12,7 @@ import { trialDayIndex } from "@/lib/trial/status";
 import { trialModulePlan } from "@/lib/drills/trialPlan";
 import { TrialNudgeGate } from "@/components/trial/TrialNudgeGate";
 import { FaisalAvatar } from "@/components/ui/FaisalAvatar";
+import { TopAppBar } from "@/components/layout/TopAppBar";
 
 export const dynamic = "force-dynamic";
 
@@ -193,44 +194,16 @@ export default async function DashboardPage() {
         />
       )}
 
-      {/* TopAppBar: greeting variant */}
-      <header className="fixed top-0 inset-x-0 z-50 bg-background/80 backdrop-blur-xl">
-        <div className="flex items-center justify-between px-margin-mobile py-4 w-full max-w-md mx-auto">
-          <Link href="/profile" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full border border-stroke-subtle bg-secondary-container text-on-secondary flex items-center justify-center font-heading font-bold overflow-hidden shrink-0">
-              {profile?.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={profile.avatar_url}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                name.charAt(0).toUpperCase()
-              )}
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-medium text-text-secondary">
-                {greeting(now)}
-              </span>
-              <span className="font-heading text-lg font-bold text-primary tracking-tight">
-                {name}
-              </span>
-            </div>
-          </Link>
-          <button
-            type="button"
-            className="relative text-primary hover:opacity-80 active:scale-95 transition-all flex items-center justify-center w-10 h-10 rounded-full bg-surface-container-lowest border border-stroke-subtle shadow-sm"
-            aria-label="Notifikasi"
-          >
-            <span className="material-symbols-outlined text-[20px]">
-              notifications
-            </span>
-          </button>
-        </div>
-      </header>
+      <TopAppBar
+        variant="home"
+        title={name}
+        subtitle={greeting(now)}
+        avatarUrl={profile?.avatar_url ?? undefined}
+        avatarFallback={name}
+        avatarHref="/profile"
+      />
 
-      <main className="px-margin-mobile pt-24 flex flex-col gap-bento-gap stagger">
+      <main className="px-margin-mobile pt-32 flex flex-col gap-bento-gap stagger">
         {/* Hero: personalized daily drill menu */}
         <div className="bg-surface-container-lowest border border-stroke-subtle bento-card rounded-3xl p-6 flex flex-col gap-5">
           <div className="flex justify-between items-start">

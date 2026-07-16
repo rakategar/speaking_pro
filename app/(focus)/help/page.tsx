@@ -21,7 +21,7 @@ export default function HelpPage() {
   return (
     <div className="min-h-screen bg-background">
       <TopAppBar variant="back" title="Bantuan & Dukungan" />
-      <main className="pt-[90px] pb-16 px-margin-mobile max-w-2xl mx-auto flex flex-col gap-6">
+      <main className="pt-32 pb-16 px-margin-mobile max-w-2xl mx-auto flex flex-col gap-6">
         {/* Tab switcher */}
         <div className="grid grid-cols-4 gap-2 bg-surface-container rounded-2xl p-1.5">
           {TABS.map((t) => {

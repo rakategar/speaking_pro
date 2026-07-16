@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { LibraryBrowser } from "@/components/library/LibraryBrowser";
 import { getTrialStatus } from "@/lib/trial/status";
+import { TopAppBar } from "@/components/layout/TopAppBar";
 
 export const dynamic = "force-dynamic";
 
@@ -33,27 +34,9 @@ export default async function LibraryPage() {
 
   return (
     <div className="w-full max-w-md mx-auto relative">
-      <header className="fixed top-0 inset-x-0 z-50 bg-background/80 backdrop-blur-xl">
-        <div className="flex items-center justify-between px-margin-mobile py-4 w-full max-w-md mx-auto">
-          <h1 className="font-heading text-headline-md-mobile text-headline-md font-extrabold text-primary tracking-tight">
-            Practice Library
-          </h1>
-          <button
-            type="button"
-            className="w-10 h-10 rounded-full bg-surface-card shadow-soft flex items-center justify-center text-primary hover:opacity-80 active:scale-95 transition"
-            aria-label="Notifikasi"
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              notifications
-            </span>
-          </button>
-        </div>
-      </header>
+      <TopAppBar variant="transactional" title="Practice Library" showBack={false} />
 
-      <main className="pt-24 px-margin-mobile w-full">
+      <main className="pt-32 px-margin-mobile w-full">
         <LibraryBrowser modules={modules ?? []} lockedSlugs={lockedSlugs} />
       </main>
     </div>

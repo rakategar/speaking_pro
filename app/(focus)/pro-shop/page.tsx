@@ -32,7 +32,7 @@ export default async function ProShopPage() {
   return (
     <div className="min-h-screen bg-surface pb-16">
       <TopAppBar variant="back" title="Pro Shop" />
-      <main className="pt-24 px-margin-mobile max-w-7xl mx-auto stagger">
+      <main className="pt-32 px-margin-mobile max-w-7xl mx-auto stagger">
         <div className="mb-8 mt-4">
           <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-primary mb-2">
             Pro Shop

@@ -55,7 +55,7 @@ export default async function ModuleDetailPage({
   return (
     <div className="w-full max-w-md mx-auto relative pb-32">
       <TopAppBar variant="back" title={module.title} />
-      <main className="pt-24 px-margin-mobile flex flex-col gap-bento-gap">
+      <main className="pt-32 px-margin-mobile flex flex-col gap-bento-gap">
         {/* Hero */}
         <div className="bg-gradient-to-br from-primary-container to-[#003558] rounded-3xl p-6 relative overflow-hidden shadow-soft">
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-brand-cyan/20 blur-3xl rounded-full" />

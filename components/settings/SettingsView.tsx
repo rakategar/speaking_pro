@@ -119,7 +119,7 @@ export function SettingsView({
   return (
     <div className="min-h-screen bg-background">
       <TopAppBar variant="back" title="Account Settings" />
-      <main className="pt-[90px] pb-12 px-margin-mobile max-w-5xl mx-auto flex flex-col md:grid md:grid-cols-2 gap-bento-gap">
+      <main className="pt-32 pb-12 px-margin-mobile max-w-5xl mx-auto flex flex-col md:grid md:grid-cols-2 gap-bento-gap">
         {/* Account information */}
         <section className="md:col-span-2 bg-surface-card rounded-3xl p-6 shadow-soft border border-stroke-subtle/50 flex flex-col gap-6 relative overflow-hidden">
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-secondary-container/10 rounded-full blur-3xl pointer-events-none" />

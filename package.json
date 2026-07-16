@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@huggingface/inference": "^4.13.21",
+    "@react-pdf/renderer": "^4.5.1",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.109.0",
     "chart.js": "^4.5.1",

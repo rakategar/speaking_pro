@@ -110,7 +110,7 @@ export function DynamicPitchView() {
   return (
     <div className="min-h-screen bg-background pb-16">
       <TopAppBar variant="back" title="Dynamic Pitch" />
-      <main className="pt-24 px-margin-mobile space-y-gutter max-w-2xl mx-auto">
+      <main className="pt-32 px-margin-mobile space-y-gutter max-w-2xl mx-auto">
         {/* Live pitch visualizer */}
         <div
           className="rounded-3xl p-6 relative overflow-hidden shadow-2xl min-h-[280px] flex flex-col justify-between"

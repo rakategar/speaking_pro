@@ -7,6 +7,7 @@ import {
   verifyNotificationSignature,
   type MidtransStatus,
 } from "@/lib/payments/midtrans";
+import { activatePremium } from "@/lib/subscription/activate";
 
 // POST /api/payments/midtrans-notify -- Midtrans HTTP(S) notification
 // (webhook). Public path (no session); authenticity comes from the
@@ -44,13 +45,7 @@ export async function POST(request: Request) {
     if (order.product_type === "subscription") {
       const renewsAt = new Date();
       renewsAt.setDate(renewsAt.getDate() + 30);
-      await supabase
-        .from("profiles")
-        .update({
-          subscription_tier: "premium",
-          subscription_renews_at: renewsAt.toISOString(),
-        })
-        .eq("id", order.user_id);
+      await activatePremium(supabase, order.user_id, renewsAt);
     }
   } else if (isFailedStatus(notif) && order.status === "pending") {
     await supabase
