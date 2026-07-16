@@ -17,6 +17,7 @@ function LoginForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState<"password" | "signup" | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
 
@@ -169,7 +170,7 @@ function LoginForm() {
             </span>
             <input
               id="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete={
                 mode === "signin" ? "current-password" : "new-password"
               }
@@ -178,8 +179,21 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full rounded-2xl border border-outline-variant bg-surface-card py-3.5 pl-12 pr-4 text-body-md text-on-surface placeholder:text-outline focus:border-secondary-container focus:outline-none focus:ring-2 focus:ring-secondary-container/30 transition"
+              className="w-full rounded-2xl border border-outline-variant bg-surface-card py-3.5 pl-12 pr-12 text-body-md text-on-surface placeholder:text-outline focus:border-secondary-container focus:outline-none focus:ring-2 focus:ring-secondary-container/30 transition"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={
+                showPassword ? "Sembunyikan password" : "Tampilkan password"
+              }
+              tabIndex={-1}
+              className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center text-outline hover:text-on-surface-variant transition"
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                {showPassword ? "visibility_off" : "visibility"}
+              </span>
+            </button>
           </div>
         </div>
 

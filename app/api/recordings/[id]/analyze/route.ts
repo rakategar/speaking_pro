@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { estimateEtaSeconds } from "@/lib/queue/eta";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -69,14 +70,14 @@ export async function POST(
     await service.from("recordings").update({ status: "queued" }).eq("id", id);
   }
 
-  const { count } = await service
-    .from("analysis_jobs")
-    .select("id", { count: "exact", head: true })
-    .in("status", ["queued", "processing"])
-    .lte("created_at", job.created_at);
+  const etaSeconds = await estimateEtaSeconds(service, {
+    status: job.status,
+    created_at: job.created_at,
+    started_at: null,
+  });
 
   return NextResponse.json(
-    { queued: true, jobId: job.id, position: count ?? 1 },
+    { queued: true, jobId: job.id, etaSeconds },
     { status: 202 },
   );
 }

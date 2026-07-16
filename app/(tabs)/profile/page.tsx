@@ -145,6 +145,13 @@ export default async function ProfilePage() {
       subtitle: "Eksklusif Member",
       toneAqua: false,
     },
+    {
+      href: "/help",
+      icon: "help",
+      title: "Bantuan & Dukungan",
+      subtitle: "FAQ, Panduan, Support & Lapor",
+      toneAqua: true,
+    },
   ];
 
   return (

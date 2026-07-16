@@ -35,9 +35,29 @@ export async function POST(request: Request) {
     );
   }
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("subscription_tier, trial_started_at")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  // Trial clock starts at onboarding completion, not signup -- only for
+  // free-tier users who haven't already had a trial window set.
+  const trialFields =
+    profile?.subscription_tier !== "premium" && !profile?.trial_started_at
+      ? {
+          trial_started_at: new Date().toISOString(),
+          trial_ends_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+        }
+      : {};
+
   const { error } = await supabase
     .from("profiles")
-    .update({ onboarding_answers: answers, onboarding_completed: true })
+    .update({
+      onboarding_answers: answers,
+      onboarding_completed: true,
+      ...trialFields,
+    })
     .eq("id", user.id);
 
   if (error) {

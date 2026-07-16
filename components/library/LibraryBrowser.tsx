@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MODULE_META, difficultyColor } from "@/lib/modules";
 import { cn } from "@/lib/utils";
+import { UpgradeNudgeModal } from "@/components/trial/UpgradeNudgeModal";
 
 type Module = {
   id: string;
@@ -27,9 +28,16 @@ const CATEGORIES = [
   "Simulasi",
 ];
 
-export function LibraryBrowser({ modules }: { modules: Module[] }) {
+export function LibraryBrowser({
+  modules,
+  lockedSlugs = new Set(),
+}: {
+  modules: Module[];
+  lockedSlugs?: Set<string>;
+}) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Semua");
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   const aiPick = modules.find((m) => m.is_ai_recommended);
 
@@ -147,42 +155,72 @@ export function LibraryBrowser({ modules }: { modules: Module[] }) {
             Tidak ada latihan yang cocok dengan pencarian Anda.
           </p>
         )}
-        {filtered.map((m) => (
-          <Link
-            key={m.id}
-            href={`/library/${m.slug}`}
-            className="bg-surface-card rounded-2xl p-4 flex items-center gap-4 shadow-soft border border-stroke-subtle hover:border-brand-cyan/50 transition-colors group"
-          >
-            <div className="w-14 h-14 rounded-xl bg-surface-container-low flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-              <div className="absolute inset-0 bg-brand-cyan/10" />
-              <span className="material-symbols-outlined text-primary relative z-10">
-                {MODULE_META[m.slug]?.icon ?? "mic"}
-              </span>
-            </div>
-            <div className="flex-grow">
-              <h4 className="text-[16px] leading-tight text-primary font-semibold mb-1">
-                {m.title}
-              </h4>
-              <p className="font-label-sm text-label-sm text-text-secondary">
-                {m.category}
-              </p>
-            </div>
-            <div className="text-right flex flex-col items-end">
-              <span className="font-label-sm text-label-sm text-text-secondary bg-surface-container py-1 px-2 rounded-lg mb-1">
-                {m.duration_minutes} Min
-              </span>
-              <span
-                className={cn(
-                  "font-label-sm text-[11px]",
-                  difficultyColor(m.difficulty),
-                )}
+        {filtered.map((m) => {
+          const locked = lockedSlugs.has(m.slug);
+          const content = (
+            <>
+              <div className="w-14 h-14 rounded-xl bg-surface-container-low flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+                <div className="absolute inset-0 bg-brand-cyan/10" />
+                <span className="material-symbols-outlined text-primary relative z-10">
+                  {locked ? "lock" : (MODULE_META[m.slug]?.icon ?? "mic")}
+                </span>
+              </div>
+              <div className="flex-grow">
+                <h4 className="text-[16px] leading-tight text-primary font-semibold mb-1">
+                  {m.title}
+                </h4>
+                <p className="font-label-sm text-label-sm text-text-secondary">
+                  {m.category}
+                </p>
+              </div>
+              <div className="text-right flex flex-col items-end">
+                <span className="font-label-sm text-label-sm text-text-secondary bg-surface-container py-1 px-2 rounded-lg mb-1">
+                  {m.duration_minutes} Min
+                </span>
+                <span
+                  className={cn(
+                    "font-label-sm text-[11px]",
+                    difficultyColor(m.difficulty),
+                  )}
+                >
+                  {m.difficulty}
+                </span>
+              </div>
+            </>
+          );
+
+          if (locked) {
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setShowUpgrade(true)}
+                className="bg-surface-card rounded-2xl p-4 flex items-center gap-4 shadow-soft border border-stroke-subtle opacity-70 transition-colors group text-left"
               >
-                {m.difficulty}
-              </span>
-            </div>
-          </Link>
-        ))}
+                {content}
+              </button>
+            );
+          }
+
+          return (
+            <Link
+              key={m.id}
+              href={`/library/${m.slug}`}
+              className="bg-surface-card rounded-2xl p-4 flex items-center gap-4 shadow-soft border border-stroke-subtle hover:border-brand-cyan/50 transition-colors group"
+            >
+              {content}
+            </Link>
+          );
+        })}
       </div>
+
+      {showUpgrade && (
+        <UpgradeNudgeModal
+          variant="soft"
+          body="Modul ini terbuka bertahap selama masa trial. Upgrade ke Premium untuk membuka seluruh modul sekaligus."
+          onClose={() => setShowUpgrade(false)}
+        />
+      )}
     </>
   );
 }

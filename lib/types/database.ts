@@ -128,6 +128,36 @@ export type Database = {
         }
         Relationships: []
       }
+      problem_reports: {
+        Row: {
+          id: string
+          user_id: string
+          category: string
+          message: string
+          screenshot_url: string | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          category: string
+          message: string
+          screenshot_url?: string | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          category?: string
+          message?: string
+          screenshot_url?: string | null
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           created_at: string
@@ -283,6 +313,7 @@ export type Database = {
           is_ai_recommended: boolean
           slug: string
           title: string
+          trial_sequence: number | null
         }
         Insert: {
           category: string
@@ -293,6 +324,7 @@ export type Database = {
           is_ai_recommended?: boolean
           slug: string
           title: string
+          trial_sequence?: number | null
         }
         Update: {
           category?: string
@@ -303,6 +335,7 @@ export type Database = {
           is_ai_recommended?: boolean
           slug?: string
           title?: string
+          trial_sequence?: number | null
         }
         Relationships: []
       }
@@ -318,6 +351,9 @@ export type Database = {
           streak_count: number
           subscription_renews_at: string | null
           subscription_tier: string
+          trial_ends_at: string | null
+          trial_nudges_seen: Json
+          trial_started_at: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -330,6 +366,9 @@ export type Database = {
           streak_count?: number
           subscription_renews_at?: string | null
           subscription_tier?: string
+          trial_ends_at?: string | null
+          trial_nudges_seen?: Json
+          trial_started_at?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -342,6 +381,9 @@ export type Database = {
           streak_count?: number
           subscription_renews_at?: string | null
           subscription_tier?: string
+          trial_ends_at?: string | null
+          trial_nudges_seen?: Json
+          trial_started_at?: string | null
         }
         Relationships: []
       }

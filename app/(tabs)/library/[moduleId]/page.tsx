@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { TopAppBar } from "@/components/layout/TopAppBar";
 import { MODULE_META, difficultyColor } from "@/lib/modules";
 import { cn } from "@/lib/utils";
+import { getTrialStatus } from "@/lib/trial/status";
 
 export const dynamic = "force-dynamic";
 
@@ -20,12 +21,21 @@ export default async function ModuleDetailPage({
 
   const { data: module } = await supabase
     .from("practice_modules")
-    .select("id, slug, title, category, difficulty, duration_minutes")
+    .select("id, slug, title, category, difficulty, duration_minutes, trial_sequence")
     .eq("slug", moduleId)
     .maybeSingle();
   if (!module) notFound();
 
   const meta = MODULE_META[module.slug];
+
+  const trialStatus = user ? await getTrialStatus(supabase, user.id) : null;
+  const locked =
+    trialStatus?.tier === "free" &&
+    module.slug !== "free-recording" &&
+    !trialStatus.unlockedSlugs.has(module.slug);
+  const unlocksOnDay = module.trial_sequence
+    ? Math.ceil(module.trial_sequence / 3)
+    : null;
 
   // Personal stats for this module.
   const { data: sessions } = await supabase
@@ -134,18 +144,25 @@ export default async function ModuleDetailPage({
         </div>
 
         {/* CTA */}
-        <Link
-          href={meta?.route ?? "/record"}
-          className="w-full bg-secondary-container text-on-secondary rounded-full py-4 flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-md font-semibold"
-        >
-          <span
-            className="material-symbols-outlined"
-            style={{ fontVariationSettings: "'FILL' 1" }}
+        {locked ? (
+          <div className="w-full bg-surface-container text-text-secondary rounded-full py-4 flex items-center justify-center gap-2 shadow-md font-semibold">
+            <span className="material-symbols-outlined">lock</span>
+            {unlocksOnDay ? `Terkunci — buka di hari ke-${unlocksOnDay}` : "Terkunci"}
+          </div>
+        ) : (
+          <Link
+            href={meta?.route ?? "/record"}
+            className="w-full bg-secondary-container text-on-secondary rounded-full py-4 flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-md font-semibold"
           >
-            play_arrow
-          </span>
-          Mulai Latihan
-        </Link>
+            <span
+              className="material-symbols-outlined"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              play_arrow
+            </span>
+            Mulai Latihan
+          </Link>
+        )}
       </main>
     </div>
   );

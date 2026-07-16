@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { getTrialStatus } from "@/lib/trial/status";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_BYTES = 25 * 1024 * 1024; // ~5 min opus is well under this
 const MIN_DURATION_S = 15;
-const MAX_DURATION_S = 5 * 60 + 5; // small slack for timer rounding
+const MAX_DURATION_S_PREMIUM = 5 * 60 + 5; // small slack for timer rounding
+const MAX_DURATION_S_TRIAL = 30;
 
 // POST /api/recordings -- multipart: audio (File), environment,
 // durationSeconds, moduleSlug? Creates the row + uploads to Storage.
@@ -18,6 +20,12 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Free-tier trial users get a 30s recording cap (Recording Studio
+  // preview); Premium keeps the full 5-minute weekly submission.
+  const trialStatus = await getTrialStatus(supabase, user.id);
+  const MAX_DURATION_S =
+    trialStatus.tier === "premium" ? MAX_DURATION_S_PREMIUM : MAX_DURATION_S_TRIAL;
 
   // One analysis in flight per user: refuse new input while a job waits.
   const { count: activeJobs } = await createServiceRoleClient()
@@ -45,7 +53,7 @@ export async function POST(request: Request) {
   }
   if (audio.size > MAX_BYTES) {
     return NextResponse.json(
-      { error: "Rekaman terlalu besar (maks 5 menit)" },
+      { error: "Rekaman terlalu besar" },
       { status: 413 },
     );
   }
@@ -64,7 +72,12 @@ export async function POST(request: Request) {
   }
   if (durationSeconds > MAX_DURATION_S) {
     return NextResponse.json(
-      { error: "Rekaman melebihi batas maksimal 5 menit." },
+      {
+        error:
+          trialStatus.tier === "premium"
+            ? "Rekaman melebihi batas maksimal 5 menit."
+            : "Rekaman melebihi batas maksimal 30 detik untuk trial. Upgrade ke Premium untuk rekaman hingga 5 menit.",
+      },
       { status: 400 },
     );
   }

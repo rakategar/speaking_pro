@@ -8,6 +8,10 @@ import {
   jakartaStartOfToday,
   type ReportSignals,
 } from "@/lib/drills/plan";
+import { trialDayIndex } from "@/lib/trial/status";
+import { trialModulePlan } from "@/lib/drills/trialPlan";
+import { TrialNudgeGate } from "@/components/trial/TrialNudgeGate";
+import { FaisalAvatar } from "@/components/ui/FaisalAvatar";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +62,9 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from("profiles")
-      .select("full_name, avatar_url, streak_count")
+      .select(
+        "full_name, avatar_url, streak_count, subscription_tier, trial_started_at, trial_nudges_seen",
+      )
       .eq("id", user.id)
       .maybeSingle(),
     supabase
@@ -94,12 +100,29 @@ export default async function DashboardPage() {
 
   const name = profile?.full_name ?? user.email?.split("@")[0] ?? "Speaker";
 
-  // Personalized daily menu from the latest report's weak points; rotates
-  // per calendar day (Asia/Jakarta). Falls back to a balanced rotation.
-  const plan = dailyPlan(
-    (latestReport as ReportSignals | null) ?? null,
-    jakartaDayIndex(now),
-  );
+  const isFreeTrial = profile?.subscription_tier !== "premium";
+  const trialDay = profile?.trial_started_at
+    ? trialDayIndex(profile.trial_started_at, now)
+    : null;
+
+  // Free-tier trial users get today's fixed, predetermined unlock (3
+  // modules/day, cumulative) instead of the adaptive weak-signal rotation
+  // premium users get from their latest report.
+  let plan: { category: string; slug: string }[];
+  if (isFreeTrial && profile?.trial_started_at && trialDay !== null) {
+    const { data: trialModules } = await supabase
+      .from("practice_modules")
+      .select("slug, category, trial_sequence")
+      .not("trial_sequence", "is", null);
+    plan = trialModulePlan(trialModules ?? [], trialDay);
+  } else {
+    // Personalized daily menu from the latest report's weak points; rotates
+    // per calendar day (Asia/Jakarta). Falls back to a balanced rotation.
+    plan = dailyPlan(
+      (latestReport as ReportSignals | null) ?? null,
+      jakartaDayIndex(now),
+    );
+  }
   const { data: planModules } = await supabase
     .from("practice_modules")
     .select("slug, title, category, duration_minutes")
@@ -111,7 +134,7 @@ export default async function DashboardPage() {
     ...p,
     module: planModules?.find((m) => m.slug === p.slug) ?? null,
   }));
-  const personalized = latestReport !== null;
+  const personalized = !isFreeTrial && latestReport !== null;
 
   // Today's practiced minutes toward the 10-minute daily goal.
   const todayMinutes = Math.floor(
@@ -162,6 +185,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="w-full max-w-md mx-auto relative">
+      {isFreeTrial && trialDay !== null && (
+        <TrialNudgeGate
+          userId={user.id}
+          trialDay={trialDay}
+          nudgesSeen={(profile?.trial_nudges_seen as Record<string, boolean>) ?? {}}
+        />
+      )}
+
       {/* TopAppBar: greeting variant */}
       <header className="fixed top-0 inset-x-0 z-50 bg-background/80 backdrop-blur-xl">
         <div className="flex items-center justify-between px-margin-mobile py-4 w-full max-w-md mx-auto">
@@ -241,11 +272,18 @@ export default async function DashboardPage() {
                 style={{ width: `${Math.max(goalPct, 2)}%` }}
               />
             </div>
-            <span className="text-xs text-text-secondary">
-              {goalPct >= 100
-                ? "Target 10 menit hari ini tercapai — luar biasa! 🎉"
-                : `${DAILY_GOAL_MINUTES - todayMinutes} menit lagi menuju target harian.`}
-            </span>
+            <div className="flex items-center gap-2">
+              <FaisalAvatar
+                expression={goalPct >= 100 ? "celebrating" : "tip-mic"}
+                size={32}
+                className="shrink-0"
+              />
+              <span className="text-xs text-text-secondary">
+                {goalPct >= 100
+                  ? "Target 10 menit hari ini tercapai — luar biasa! 🎉"
+                  : `${DAILY_GOAL_MINUTES - todayMinutes} menit lagi menuju target harian.`}
+              </span>
+            </div>
           </div>
 
           {/* Today's drills */}
@@ -306,13 +344,20 @@ export default async function DashboardPage() {
         <div className="bg-primary-container border border-primary-fixed/20 rounded-3xl p-6 relative overflow-hidden flex flex-col gap-5 shadow-lg">
           <div className="absolute inset-0 border border-white/5 rounded-3xl pointer-events-none" />
           <div className="flex justify-between items-start z-10">
-            <div className="flex flex-col gap-0.5">
-              <h3 className="font-heading text-lg font-bold text-on-primary tracking-tight">
-                Rekaman Mingguan
-              </h3>
-              <span className="text-sm text-primary-fixed-dim">
-                Durasi Maks 5 Menit
-              </span>
+            <div className="flex items-center gap-3">
+              <FaisalAvatar
+                expression="speaking-confident"
+                size={44}
+                className="shrink-0"
+              />
+              <div className="flex flex-col gap-0.5">
+                <h3 className="font-heading text-lg font-bold text-on-primary tracking-tight">
+                  Rekaman Mingguan
+                </h3>
+                <span className="text-sm text-primary-fixed-dim">
+                  Durasi Maks 5 Menit
+                </span>
+              </div>
             </div>
             <div className="bg-surface-variant/20 border border-surface-variant/30 text-on-primary px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
               <span

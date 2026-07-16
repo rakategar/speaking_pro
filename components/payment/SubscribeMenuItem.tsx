@@ -2,47 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-
-declare global {
-  interface Window {
-    snap?: {
-      pay: (
-        token: string,
-        callbacks: {
-          onSuccess?: (result: unknown) => void;
-          onPending?: (result: unknown) => void;
-          onError?: (result: unknown) => void;
-          onClose?: () => void;
-        },
-      ) => void;
-    };
-  }
-}
-
-// Loads snap.js once, with the client key delivered at runtime by the API
-// (no NEXT_PUBLIC_ var, so changing keys needs no rebuild).
-function loadSnapJs(src: string, clientKey: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (window.snap) return resolve();
-    const existing = document.querySelector<HTMLScriptElement>(
-      'script[data-midtrans="snap"]',
-    );
-    if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () =>
-        reject(new Error("Gagal memuat Midtrans Snap")),
-      );
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = src;
-    script.dataset.midtrans = "snap";
-    script.setAttribute("data-client-key", clientKey);
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Gagal memuat Midtrans Snap"));
-    document.head.appendChild(script);
-  });
-}
+import { loadSnapJs } from "@/lib/payments/snap";
 
 export function SubscribeMenuItem({
   isPro,

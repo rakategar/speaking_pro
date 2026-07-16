@@ -10,6 +10,8 @@ type TopAppBarProps = {
   avatarUrl?: string;
   onNotificationClick?: () => void;
   className?: string;
+  /** Disable the back button (e.g. while an upload is in flight). */
+  backDisabled?: boolean;
 };
 
 /**
@@ -25,6 +27,7 @@ export function TopAppBar({
   avatarUrl,
   onNotificationClick,
   className,
+  backDisabled = false,
 }: TopAppBarProps) {
   const router = useRouter();
 
@@ -32,6 +35,7 @@ export function TopAppBar({
   // (opened from a PWA launch, push notification, or a direct link) --
   // fall back to the dashboard so the button always does something.
   function goBack() {
+    if (backDisabled) return;
     if (window.history.length > 1) router.back();
     else router.push("/dashboard");
   }
@@ -58,7 +62,8 @@ export function TopAppBar({
         <button
           type="button"
           onClick={goBack}
-          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors active:scale-95 text-primary -ml-2"
+          disabled={backDisabled}
+          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors active:scale-95 text-primary -ml-2 disabled:opacity-40 disabled:pointer-events-none"
           aria-label="Kembali"
         >
           <span className="material-symbols-outlined">arrow_back</span>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TopAppBar } from "@/components/layout/TopAppBar";
+import { FaisalAvatar } from "@/components/ui/FaisalAvatar";
 import type { DrillConfig } from "@/lib/drills/content";
 import {
   BlankSpaceEngine,
@@ -100,11 +101,7 @@ export function DrillPlayer({ config }: { config: DrillConfig }) {
       <div className="min-h-screen bg-background flex flex-col">
         <TopAppBar variant="back" title={config.title} />
         <main className="flex-1 flex flex-col items-center justify-center px-margin-mobile gap-6 text-center">
-          <div className="w-24 h-24 rounded-full bg-secondary-container/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-secondary-container text-[48px]">
-              celebration
-            </span>
-          </div>
+          <FaisalAvatar expression="cheering" size={96} priority />
           <div>
             <h2 className="font-headline-md text-headline-md text-primary">
               Drill Selesai!

@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isAuthorized } from "@/lib/analyst/auth";
+import { listAnalystUsers } from "@/lib/analyst/users";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/types/database";
+
+type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 
 export const runtime = "nodejs";
 
@@ -10,41 +14,11 @@ export async function GET(request: NextRequest) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const supabase = createServiceRoleClient();
-
-  const [{ data: usersData, error: usersError }, { data: profiles }] =
-    await Promise.all([
-      supabase.auth.admin.listUsers({ page: 1, perPage: 500 }),
-      supabase
-        .from("profiles")
-        .select("id, full_name, subscription_tier, subscription_renews_at"),
-    ]);
-  if (usersError) {
-    return NextResponse.json({ error: usersError.message }, { status: 500 });
+  const result = await listAnalystUsers();
+  if (result.error) {
+    return NextResponse.json({ error: result.error }, { status: 500 });
   }
-
-  const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
-  const items = (usersData?.users ?? [])
-    .map((u) => {
-      const p = byId.get(u.id);
-      return {
-        id: u.id,
-        email: u.email ?? "",
-        full_name: p?.full_name ?? null,
-        subscription_tier: p?.subscription_tier ?? "free",
-        subscription_renews_at: p?.subscription_renews_at ?? null,
-        created_at: u.created_at,
-      };
-    })
-    .sort((a, b) => {
-      // Premium first, then newest signups.
-      if (a.subscription_tier !== b.subscription_tier) {
-        return a.subscription_tier === "premium" ? -1 : 1;
-      }
-      return a.created_at < b.created_at ? 1 : -1;
-    });
-
-  return NextResponse.json({ items });
+  return NextResponse.json({ items: result.items });
 }
 
 export async function POST(request: NextRequest) {
@@ -53,27 +27,47 @@ export async function POST(request: NextRequest) {
   }
   const body = await request.json().catch(() => ({}));
   const userId = typeof body.userId === "string" ? body.userId : "";
-  const action = body.action === "activate" ? "activate" : body.action === "deactivate" ? "deactivate" : "";
+  const ACTIONS = ["activate", "deactivate", "reset_trial", "extend_trial"] as const;
+  const action = ACTIONS.includes(body.action) ? body.action : "";
   const days =
     Number.isFinite(body.days) && body.days > 0 && body.days <= 366
       ? Math.round(body.days)
-      : 30;
+      : action === "extend_trial"
+        ? 7
+        : 30;
   if (!userId || !action) {
     return NextResponse.json(
-      { error: "userId dan action (activate/deactivate) wajib" },
+      {
+        error:
+          "userId dan action (activate/deactivate/reset_trial/extend_trial) wajib",
+      },
       { status: 400 },
     );
   }
 
-  const update =
-    action === "activate"
-      ? {
-          subscription_tier: "premium",
-          subscription_renews_at: new Date(
-            Date.now() + days * 24 * 60 * 60 * 1000,
-          ).toISOString(),
-        }
-      : { subscription_tier: "free", subscription_renews_at: null };
+  let update: ProfileUpdate;
+  if (action === "activate") {
+    update = {
+      subscription_tier: "premium",
+      subscription_renews_at: new Date(
+        Date.now() + days * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+    };
+  } else if (action === "deactivate") {
+    update = { subscription_tier: "free", subscription_renews_at: null };
+  } else if (action === "reset_trial") {
+    // Fresh 7-day window (support/goodwill case for a lapsed free user).
+    update = {
+      trial_started_at: new Date().toISOString(),
+      trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    };
+  } else {
+    // extend_trial: push the deadline out without touching
+    // trial_started_at, so already-unlocked modules stay unlocked.
+    update = {
+      trial_ends_at: new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString(),
+    };
+  }
 
   const { error } = await createServiceRoleClient()
     .from("profiles")

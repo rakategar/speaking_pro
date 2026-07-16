@@ -1,14 +1,35 @@
 import { createClient } from "@/lib/supabase/server";
 import { LibraryBrowser } from "@/components/library/LibraryBrowser";
+import { getTrialStatus } from "@/lib/trial/status";
 
 export const dynamic = "force-dynamic";
 
 export default async function LibraryPage() {
   const supabase = await createClient();
-  const { data: modules } = await supabase
-    .from("practice_modules")
-    .select("id, slug, title, category, difficulty, duration_minutes, is_ai_recommended")
-    .order("created_at");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Independent of each other -- run together instead of as a waterfall.
+  const [{ data: modules }, trialStatus] = await Promise.all([
+    supabase
+      .from("practice_modules")
+      .select("id, slug, title, category, difficulty, duration_minutes, is_ai_recommended")
+      .order("created_at"),
+    user ? getTrialStatus(supabase, user.id) : Promise.resolve(null),
+  ]);
+  const lockedSlugs =
+    trialStatus?.tier === "free"
+      ? new Set(
+          (modules ?? [])
+            .map((m) => m.slug)
+            .filter(
+              (slug) =>
+                slug !== "free-recording" &&
+                !trialStatus.unlockedSlugs.has(slug),
+            ),
+        )
+      : new Set<string>();
 
   return (
     <div className="w-full max-w-md mx-auto relative">
@@ -33,7 +54,7 @@ export default async function LibraryPage() {
       </header>
 
       <main className="pt-24 px-margin-mobile w-full">
-        <LibraryBrowser modules={modules ?? []} />
+        <LibraryBrowser modules={modules ?? []} lockedSlugs={lockedSlugs} />
       </main>
     </div>
   );

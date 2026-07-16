@@ -38,6 +38,8 @@ export function SettingsView({
   const [occupation, setOccupation] = useState(initialProfile.occupation);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const [prefs, setPrefs] = useState<NotifPrefs>({
     push: true,
@@ -56,6 +58,31 @@ export function SettingsView({
     const next = { ...prefs, [key]: value };
     setPrefs(next);
     localStorage.setItem(NOTIF_KEY, JSON.stringify(next));
+  }
+
+  async function uploadAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file) return;
+    setUploadingAvatar(true);
+    setNotice(null);
+    try {
+      const body = new FormData();
+      body.append("image", file);
+      const res = await fetch("/api/profile/avatar", {
+        method: "POST",
+        body,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNotice(json.error ?? "Gagal mengunggah foto.");
+        return;
+      }
+      setNotice("Foto profil diperbarui.");
+      router.refresh();
+    } finally {
+      setUploadingAvatar(false);
+    }
   }
 
   async function saveProfile() {
@@ -77,18 +104,6 @@ export function SettingsView({
     setEditing(false);
     setNotice("Profil tersimpan.");
     router.refresh();
-  }
-
-  async function changePassword() {
-    setNotice(null);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/settings`,
-    });
-    setNotice(
-      error
-        ? `Gagal mengirim email: ${error.message}`
-        : `Link ganti password terkirim ke ${email}.`,
-    );
   }
 
   const isPro = initialProfile.subscription_tier === "premium";
@@ -166,19 +181,39 @@ export function SettingsView({
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mt-2">
-              <div className="w-24 h-24 rounded-full border-4 border-surface shadow-sm bg-secondary-container flex items-center justify-center overflow-hidden shrink-0">
-                {initialProfile.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={initialProfile.avatar_url}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="font-heading text-headline-md font-bold text-on-secondary">
-                    {displayName.charAt(0).toUpperCase()}
+              <div className="relative shrink-0">
+                <div className="w-24 h-24 rounded-full border-4 border-surface shadow-sm bg-secondary-container flex items-center justify-center overflow-hidden">
+                  {initialProfile.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={initialProfile.avatar_url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="font-heading text-headline-md font-bold text-on-secondary">
+                      {displayName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <label
+                  className={`absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-primary-container text-on-primary flex items-center justify-center shadow-md border-2 border-surface-card cursor-pointer hover:opacity-90 active:scale-95 transition ${
+                    uploadingAvatar ? "opacity-60 pointer-events-none" : ""
+                  }`}
+                  aria-label="Ubah foto profil"
+                  title="Ubah foto profil"
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    {uploadingAvatar ? "progress_activity" : "photo_camera"}
                   </span>
-                )}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={uploadAvatar}
+                    disabled={uploadingAvatar}
+                    className="sr-only"
+                  />
+                </label>
               </div>
               <div className="flex flex-col gap-1 flex-1">
                 <h3 className="font-headline-md text-headline-md-mobile text-headline-md text-primary">
@@ -290,7 +325,7 @@ export function SettingsView({
           <div className="flex flex-col">
             <button
               type="button"
-              onClick={changePassword}
+              onClick={() => setShowPasswordModal(true)}
               className="flex items-center justify-between py-3 group hover:bg-surface-container-lowest -mx-2 px-2 rounded-lg transition-colors text-left"
             >
               <div className="flex items-center gap-4">
@@ -333,33 +368,6 @@ export function SettingsView({
           </div>
         </section>
 
-        {/* Help & support */}
-        <section className="md:col-span-2 bg-surface-card rounded-3xl p-6 shadow-soft border border-stroke-subtle/50 flex flex-col gap-6">
-          <h2 className="font-title-lg text-title-lg text-primary">
-            Bantuan &amp; Dukungan
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { icon: "help", label: "FAQ & Artikel" },
-              { icon: "support_agent", label: "Hubungi Support" },
-              { icon: "menu_book", label: "Panduan Pengguna" },
-              { icon: "bug_report", label: "Laporkan Masalah" },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="flex flex-col items-start gap-3 p-4 rounded-xl border border-stroke-subtle hover:border-secondary-container hover:shadow-sm cursor-pointer transition-all bg-background/50 group"
-              >
-                <span className="material-symbols-outlined text-secondary text-[28px] group-hover:scale-110 transition-transform">
-                  {item.icon}
-                </span>
-                <span className="font-label-md text-label-md text-primary">
-                  {item.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {/* Sign out */}
         <div className="md:col-span-2 flex flex-col items-center justify-center pt-6 gap-2 pb-8">
           <SignOutButton variant="ghost" />
@@ -368,6 +376,154 @@ export function SettingsView({
           </span>
         </div>
       </main>
+
+      {showPasswordModal && (
+        <ChangePasswordModal
+          onClose={() => setShowPasswordModal(false)}
+          onChanged={(msg) => setNotice(msg)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PasswordInput({
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+}: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  autoComplete?: string;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        required
+        minLength={6}
+        className="w-full rounded-2xl border border-outline-variant bg-surface-card py-3 pl-4 pr-12 text-body-md text-on-surface focus:border-secondary-container focus:outline-none focus:ring-2 focus:ring-secondary-container/30 transition"
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setShow((v) => !v)}
+        aria-label={show ? "Sembunyikan password" : "Tampilkan password"}
+        className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center text-outline hover:text-on-surface-variant transition"
+      >
+        <span className="material-symbols-outlined text-[20px]">
+          {show ? "visibility_off" : "visibility"}
+        </span>
+      </button>
+    </div>
+  );
+}
+
+function ChangePasswordModal({
+  onClose,
+  onChanged,
+}: {
+  onClose: () => void;
+  onChanged: (message: string) => void;
+}) {
+  const supabase = createClient();
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    if (newPassword.length < 6) {
+      setError("Password minimal 6 karakter.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Konfirmasi password tidak cocok.");
+      return;
+    }
+    setSaving(true);
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    setSaving(false);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+    onChanged("Password berhasil diubah.");
+    onClose();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-3xl border border-stroke-subtle bg-surface-card p-6 shadow-soft"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <h3 className="font-title-lg text-title-lg text-primary">
+            Ganti Password
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-text-secondary hover:text-on-surface"
+            aria-label="Tutup"
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              close
+            </span>
+          </button>
+        </div>
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label className="block text-label-md font-label-md text-on-surface-variant mb-2">
+              Password Baru
+            </label>
+            <PasswordInput
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Minimal 6 karakter"
+              autoComplete="new-password"
+            />
+          </div>
+          <div>
+            <label className="block text-label-md font-label-md text-on-surface-variant mb-2">
+              Konfirmasi Password
+            </label>
+            <PasswordInput
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Ulangi password baru"
+              autoComplete="new-password"
+            />
+          </div>
+          {error && (
+            <p role="alert" className="text-sm text-red-500">
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full rounded-full bg-primary-container py-3 font-label-md text-label-md text-on-primary hover:opacity-90 active:scale-[0.99] transition disabled:opacity-60"
+          >
+            {saving ? "Menyimpan..." : "Simpan Password Baru"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { TrendChart } from "@/components/report/TrendChart";
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import { TopAppBar } from "@/components/layout/TopAppBar";
+import { BlurredPremiumSection } from "@/components/report/BlurredPremiumSection";
+import { FaisalAvatar, type FaisalExpression } from "@/components/ui/FaisalAvatar";
 import type { Insight } from "@/lib/hf/scoring-llm";
 
 type AiInsights = {
@@ -23,21 +25,30 @@ export default async function ReportPage({
   } = await supabase.auth.getUser();
   if (!user) notFound();
 
-  const { data: report } = await supabase
-    .from("reports")
-    .select(
-      "*, recordings!reports_recording_id_fkey(environment, created_at, duration_seconds), next_module:practice_modules!reports_next_step_module_id_fkey(slug, title, category)",
-    )
-    .eq("recording_id", recordingId)
-    .maybeSingle();
+  // Independent of each other -- run together instead of as a waterfall.
+  const [{ data: profile }, { data: report }, { data: history }] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select("subscription_tier")
+        .eq("id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("reports")
+        .select(
+          "*, recordings!reports_recording_id_fkey(environment, created_at, duration_seconds), next_module:practice_modules!reports_next_step_module_id_fkey(slug, title, category)",
+        )
+        .eq("recording_id", recordingId)
+        .maybeSingle(),
+      supabase
+        .from("score_history")
+        .select("week_label, overall_score, recorded_at")
+        .eq("user_id", user.id)
+        .order("recorded_at", { ascending: false })
+        .limit(4),
+    ]);
+  const isPremium = profile?.subscription_tier === "premium";
   if (!report) notFound();
-
-  const { data: history } = await supabase
-    .from("score_history")
-    .select("week_label, overall_score, recorded_at")
-    .eq("user_id", user.id)
-    .order("recorded_at", { ascending: false })
-    .limit(4);
 
   const trend = (history ?? []).reverse();
   const previousScore =
@@ -46,6 +57,10 @@ export default async function ReportPage({
     previousScore !== null && report.overall_score !== null
       ? report.overall_score - previousScore
       : null;
+
+  const score = report.overall_score ?? 0;
+  const scoreExpression: FaisalExpression =
+    score >= 85 ? "celebrating" : score >= 65 ? "thumbs-up" : "tip-mic";
 
   const ai = (report.ai_insights ?? {}) as AiInsights;
   const insights = ai.insights ?? [];
@@ -74,13 +89,16 @@ export default async function ReportPage({
           </p>
         </div>
 
-        {/* Score metrics bento grid */}
-        <div className="grid grid-cols-2 gap-bento-gap md:grid-cols-3">
-          <div className="col-span-2 md:col-span-1 bg-primary rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[160px] shadow-soft border border-white/10">
-            <div className="absolute -right-10 -top-10 w-32 h-32 bg-brand-cyan/20 rounded-full blur-2xl" />
-            <div className="relative z-10">
+        {/* Ringkasan Analisa: overall score always visible, even for trial
+            users -- the curiosity hook alongside the transcript. Everything
+            past this point (breakdown, insights, coach notes, trend, next
+            steps) is the gated part, see BlurredPremiumSection below. */}
+        <div className="bg-primary rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[160px] shadow-soft border border-white/10">
+          <div className="absolute -right-10 -top-10 w-32 h-32 bg-brand-cyan/20 rounded-full blur-2xl" />
+          <div className="relative z-10 flex items-center justify-between gap-4">
+            <div>
               <p className="font-label-md text-label-md text-brand-aqua uppercase tracking-wider">
-                Overall Score
+                Ringkasan Analisa
               </p>
               <div className="flex items-baseline mt-2">
                 <span className="font-display-lg text-display-lg text-white">
@@ -102,8 +120,18 @@ export default async function ReportPage({
                 </p>
               )}
             </div>
+            {report.overall_score !== null && (
+              <FaisalAvatar
+                expression={scoreExpression}
+                size={72}
+                className="shrink-0"
+              />
+            )}
           </div>
+        </div>
 
+        <BlurredPremiumSection active={!isPremium}>
+        <div className="grid grid-cols-2 gap-bento-gap">
           <div className="bg-surface-card rounded-3xl p-5 shadow-soft border border-stroke-subtle flex flex-col items-center justify-center text-center">
             <CircularProgress
               value={report.confidence_score ?? 0}
@@ -241,8 +269,10 @@ export default async function ReportPage({
             </p>
           </div>
         )}
+        </BlurredPremiumSection>
 
-        {/* Transcript */}
+        {/* Transcript -- always visible, even for free-tier trial users:
+            the deliberate "curiosity hook" (see BlurredPremiumSection). */}
         {report.transcript && (
           <details className="bg-surface-card rounded-3xl p-6 shadow-soft border border-stroke-subtle group">
             <summary className="font-title-lg text-title-lg text-primary cursor-pointer list-none flex items-center justify-between">
@@ -257,6 +287,7 @@ export default async function ReportPage({
           </details>
         )}
 
+        <BlurredPremiumSection active={!isPremium}>
         {/* Performance Trend */}
         {trend.length >= 2 && (
           <div className="bg-surface-card rounded-3xl p-6 shadow-soft border border-stroke-subtle mt-6">
@@ -297,6 +328,7 @@ export default async function ReportPage({
             </div>
           </div>
         )}
+        </BlurredPremiumSection>
       </main>
     </div>
   );

@@ -2,17 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useRecorder } from "@/components/recording/useRecorder";
 import { Soundwave } from "@/components/recording/Soundwave";
 import { ENVIRONMENTS } from "@/components/recording/environments";
 import { EnablePush } from "@/components/push/EnablePush";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { FaisalAvatar } from "@/components/ui/FaisalAvatar";
+import { TopAppBar } from "@/components/layout/TopAppBar";
 import { cn } from "@/lib/utils";
 
-type Phase = "studio" | "uploading" | "queued" | "failed";
+type Phase = "studio" | "review" | "uploading" | "queued" | "failed";
 
-type QueueInfo = { active: boolean; position?: number; recordingId?: string };
+type QueueInfo = { active: boolean; etaSeconds?: number; recordingId?: string };
 
 const MIN_SECONDS = 15;
 
@@ -22,6 +25,17 @@ function formatTime(total: number) {
     .padStart(2, "0");
   const s = (total % 60).toString().padStart(2, "0");
   return `${m}:${s}`;
+}
+
+// "1 menit 30 detik lagi" style copy for an ETA in seconds -- rounded up to
+// the nearest 30s so it doesn't read as falsely precise.
+function formatEta(totalSeconds: number) {
+  const rounded = Math.max(30, Math.ceil(totalSeconds / 30) * 30);
+  const m = Math.floor(rounded / 60);
+  const s = rounded % 60;
+  if (m === 0) return `${s} detik lagi`;
+  if (s === 0) return `${m} menit lagi`;
+  return `${m} menit ${s} detik lagi`;
 }
 
 const STEPS = [
@@ -40,20 +54,41 @@ const STEPS = [
 ];
 
 function RecordingStudio() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const moduleSlug = searchParams.get("module") ?? "free-recording";
 
-  const recorder = useRecorder();
+  const [maxSeconds, setMaxSeconds] = useState(5 * 60);
+  useEffect(() => {
+    fetch("/api/trial/status")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((info) => {
+        if (info?.tier === "free") setMaxSeconds(info.maxRecordingSeconds ?? 30);
+      })
+      .catch(() => {});
+  }, []);
+
+  const recorder = useRecorder({ maxSeconds });
   const [envSlug, setEnvSlug] = useState(ENVIRONMENTS[0].slug);
   const [phase, setPhase] = useState<Phase>("studio");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [queuePos, setQueuePos] = useState<number | null>(null);
+  const [queueEta, setQueueEta] = useState<number | null>(null);
   const [pendingQueue, setPendingQueue] = useState<QueueInfo | null>(null);
+  const [showAnalyzeConfirm, setShowAnalyzeConfirm] = useState(false);
+  const [reviewBlob, setReviewBlob] = useState<Blob | null>(null);
+  const [reviewUrl, setReviewUrl] = useState<string | null>(null);
+  const [reviewSeconds, setReviewSeconds] = useState(0);
 
   const env = ENVIRONMENTS.find((e) => e.slug === envSlug) ?? ENVIRONMENTS[0];
   const isLive = recorder.status === "recording" || recorder.status === "paused";
-  const busy = phase === "uploading" || phase === "queued";
+  const busy =
+    phase === "uploading" || phase === "queued" || phase === "review";
+
+  // Release the object URL when it's replaced or the page unmounts.
+  useEffect(() => {
+    return () => {
+      if (reviewUrl) URL.revokeObjectURL(reviewUrl);
+    };
+  }, [reviewUrl]);
 
   // One analysis at a time: while the user still has a job in the queue,
   // recording is blocked. Poll so the page unblocks by itself when done.
@@ -77,7 +112,9 @@ function RecordingStudio() {
     };
   }, [phase]);
 
-  const handleStopAndReview = useCallback(async () => {
+  // Stop recording and drop into a review step -- listen back or re-record
+  // before committing to analysis. Applies to every tier, not just trial.
+  const handleStop = useCallback(async () => {
     const durationSeconds = recorder.seconds;
     if (durationSeconds < MIN_SECONDS) {
       setErrorMsg(
@@ -92,16 +129,40 @@ function RecordingStudio() {
       setPhase("failed");
       return;
     }
+    setReviewBlob(blob);
+    setReviewSeconds(durationSeconds);
+    setReviewUrl(URL.createObjectURL(blob));
+    setPhase("review");
+  }, [recorder]);
+
+  const handleReRecord = useCallback(() => {
+    if (reviewUrl) URL.revokeObjectURL(reviewUrl);
+    setReviewBlob(null);
+    setReviewUrl(null);
+    setReviewSeconds(0);
+    setErrorMsg(null);
+    recorder.reset();
+    setPhase("studio");
+  }, [reviewUrl, recorder]);
+
+  const handleAnalyze = useCallback(() => {
+    if (!reviewBlob) return;
+    setShowAnalyzeConfirm(true);
+  }, [reviewBlob]);
+
+  const confirmAnalyze = useCallback(async () => {
+    setShowAnalyzeConfirm(false);
+    if (!reviewBlob) return;
 
     try {
       setPhase("uploading");
       const form = new FormData();
       form.append(
         "audio",
-        new File([blob], "recording.webm", { type: blob.type }),
+        new File([reviewBlob], "recording.webm", { type: reviewBlob.type }),
       );
       form.append("environment", envSlug);
-      form.append("durationSeconds", String(durationSeconds));
+      form.append("durationSeconds", String(reviewSeconds));
       form.append("moduleSlug", moduleSlug);
 
       const uploadRes = await fetch("/api/recordings", {
@@ -120,17 +181,18 @@ function RecordingStudio() {
         throw new Error(analyzeJson.error ?? "Gagal masuk antrean analisis");
       }
 
+      if (reviewUrl) URL.revokeObjectURL(reviewUrl);
       // Recording is now in the analysis queue -- no waiting here.
-      setQueuePos(analyzeJson.position ?? null);
+      setQueueEta(analyzeJson.etaSeconds ?? null);
       setPhase("queued");
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Terjadi kesalahan.");
       setPhase("failed");
     }
-  }, [recorder, envSlug, moduleSlug]);
+  }, [reviewBlob, reviewSeconds, reviewUrl, envSlug, moduleSlug]);
 
-  // Hard cap: the recorder pauses itself at 5 minutes; submit automatically
-  // so the user can't keep going past the limit.
+  // Hard cap: the recorder pauses itself at maxSeconds; stop automatically
+  // (into review, same as a manual stop) so the user can't keep going.
   const autoSubmitted = useRef(false);
   useEffect(() => {
     if (
@@ -140,25 +202,22 @@ function RecordingStudio() {
       !autoSubmitted.current
     ) {
       autoSubmitted.current = true;
-      setErrorMsg("Batas 5 menit tercapai — rekaman dikirim otomatis.");
-      handleStopAndReview();
+      setErrorMsg(
+        `Batas ${formatTime(recorder.maxSeconds)} tercapai — rekaman dihentikan otomatis.`,
+      );
+      handleStop();
     }
-  }, [isLive, phase, recorder.seconds, recorder.maxSeconds, handleStopAndReview]);
+  }, [isLive, phase, recorder.seconds, recorder.maxSeconds, handleStop]);
 
   return (
-    <main className="flex-1 flex flex-col items-center justify-center px-margin-mobile py-8 relative w-full max-w-lg mx-auto pb-24 min-h-screen">
-      {/* Close / back */}
-      <button
-        type="button"
-        onClick={() =>
-          window.history.length > 1 ? router.back() : router.push("/dashboard")
-        }
-        className="absolute top-5 left-5 z-20 w-10 h-10 rounded-full bg-surface-card border border-stroke-subtle shadow-soft flex items-center justify-center text-on-surface-variant active:scale-95 transition"
-        aria-label="Kembali"
-        disabled={busy}
-      >
-        <span className="material-symbols-outlined text-[20px]">close</span>
-      </button>
+    <main className="flex-1 flex flex-col items-center px-margin-mobile pt-24 pb-24 relative w-full max-w-lg mx-auto">
+      {/* Shared navbar, consistent with the other recording views; back is
+          blocked while an upload/queue is in flight. */}
+      <TopAppBar
+        variant="back"
+        title="Studio Rekaman"
+        backDisabled={busy}
+      />
 
       {/* Timer header */}
       <div className="flex flex-col items-center mb-6">
@@ -185,8 +244,8 @@ function RecordingStudio() {
         </div>
         <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/60 mt-2">
           {isLive
-            ? "Recording Session • Min 00:15 • Maks 05:00"
-            : "Siap Merekam • Min 00:15 • Maks 05:00"}
+            ? `Recording Session • Min 00:15 • Maks ${formatTime(recorder.maxSeconds)}`
+            : `Siap Merekam • Min 00:15 • Maks ${formatTime(recorder.maxSeconds)}`}
         </span>
       </div>
 
@@ -313,7 +372,7 @@ function RecordingStudio() {
               </button>
               <button
                 type="button"
-                onClick={handleStopAndReview}
+                onClick={handleStop}
                 disabled={recorder.seconds < MIN_SECONDS}
                 className="flex-1 h-14 rounded-full bg-primary-container text-on-primary font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
               >
@@ -380,6 +439,68 @@ function RecordingStudio() {
         </div>
       </div>
 
+      {/* Review overlay: listen back, re-record, or continue to analysis --
+          applies to every tier, not just the free trial. */}
+      {phase === "review" && reviewUrl && (
+        <div className="fixed inset-0 z-50 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
+          <div className="pop-in">
+            <FaisalAvatar expression="thinking-idea" size={96} priority />
+          </div>
+          <div>
+            <p className="text-white font-heading text-title-lg font-bold">
+              Dengarkan Rekaman Anda
+            </p>
+            <p className="text-white/70 text-sm mt-2 max-w-sm">
+              Durasi {formatTime(reviewSeconds)}. Dengarkan dulu, lalu rekam
+              ulang atau lanjutkan ke analisis.
+            </p>
+          </div>
+          <audio controls src={reviewUrl} className="w-full max-w-xs" />
+          {(recorder.error || errorMsg) && (
+            <p
+              role="alert"
+              className="w-full max-w-xs rounded-2xl bg-error-container text-on-error-container px-4 py-3 text-label-md font-label-md"
+            >
+              {recorder.error ?? errorMsg}
+            </p>
+          )}
+          <div className="flex flex-col gap-3 w-full max-w-xs">
+            <button
+              type="button"
+              onClick={handleAnalyze}
+              className="h-12 rounded-full bg-white text-primary-container font-semibold flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                auto_awesome
+              </span>
+              Lanjut ke Analisa
+            </button>
+            <button
+              type="button"
+              onClick={handleReRecord}
+              className="h-12 rounded-full border border-white/30 text-white font-semibold flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                replay
+              </span>
+              Rekam Ulang
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showAnalyzeConfirm && (
+        <ConfirmDialog
+          title="Mulai Analisa Rekaman?"
+          body={`Durasi ${formatTime(reviewSeconds)} akan dikirim ke AI untuk dinilai. Anda tidak bisa mengubah rekaman ini lagi setelah dikirim.`}
+          confirmLabel="Ya, Analisa Sekarang"
+          cancelLabel="Batal"
+          sticker="tip-mic"
+          onConfirm={confirmAnalyze}
+          onCancel={() => setShowAnalyzeConfirm(false)}
+        />
+      )}
+
       {/* Uploading overlay */}
       {phase === "uploading" && (
         <div className="fixed inset-0 z-50 bg-primary-container/90 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-10 text-center overlay-in">
@@ -400,19 +521,17 @@ function RecordingStudio() {
       {/* Queued (submitted) overlay -- no waiting: results come later */}
       {phase === "queued" && (
         <div className="fixed inset-0 z-50 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
-          <div className="w-20 h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center pop-in">
-            <span className="material-symbols-outlined text-light-aqua text-[40px]">
-              schedule_send
-            </span>
+          <div className="pop-in">
+            <FaisalAvatar expression="analyzing" size={96} priority />
           </div>
           <div>
             <p className="text-white font-heading text-title-lg font-bold">
               Masuk Antrean Analisis
             </p>
             <p className="text-white/70 text-sm mt-2 max-w-sm">
-              Rekaman Anda ada di{" "}
+              Perkiraan selesai{" "}
               <span className="font-bold text-light-aqua">
-                antrean #{queuePos ?? "-"}
+                {queueEta !== null ? formatEta(queueEta) : "beberapa saat lagi"}
               </span>
               . Anda tidak perlu menunggu di halaman ini — hasilnya bisa
               dilihat di Riwayat begitu selesai.
@@ -442,19 +561,19 @@ function RecordingStudio() {
       {/* Blocked: a previous analysis is still in the queue */}
       {phase === "studio" && pendingQueue?.active && (
         <div className="fixed inset-0 z-40 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
-          <div className="w-20 h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center pop-in">
-            <span className="material-symbols-outlined text-light-aqua text-[40px]">
-              hourglass_top
-            </span>
+          <div className="pop-in">
+            <FaisalAvatar expression="analyzing" size={96} priority />
           </div>
           <div>
             <p className="text-white font-heading text-title-lg font-bold">
               Analisis Sebelumnya Masih Diproses
             </p>
             <p className="text-white/70 text-sm mt-2 max-w-sm">
-              Rekaman Anda masih dalam{" "}
+              Perkiraan selesai{" "}
               <span className="font-bold text-light-aqua">
-                antrean #{pendingQueue.position ?? "-"}
+                {pendingQueue.etaSeconds !== undefined
+                  ? formatEta(pendingQueue.etaSeconds)
+                  : "beberapa saat lagi"}
               </span>
               . Anda bisa merekam lagi setelah analisis ini selesai — halaman
               ini akan terbuka otomatis.
@@ -486,11 +605,7 @@ function RecordingStudio() {
         <div className="w-full mt-4 flex gap-3">
           <button
             type="button"
-            onClick={() => {
-              setPhase("studio");
-              setErrorMsg(null);
-              recorder.reset();
-            }}
+            onClick={handleReRecord}
             className="flex-1 h-12 rounded-full border border-outline-variant text-on-surface font-semibold"
           >
             Rekam Ulang

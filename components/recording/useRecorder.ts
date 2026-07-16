@@ -10,7 +10,7 @@ export type RecorderStatus =
   | "stopped"
   | "error";
 
-const MAX_SECONDS = 5 * 60;
+const DEFAULT_MAX_SECONDS = 5 * 60;
 
 function pickMimeType(): string {
   if (typeof MediaRecorder === "undefined") return "";
@@ -26,10 +26,12 @@ function pickMimeType(): string {
 
 /**
  * MediaRecorder + WebAudio AnalyserNode in one hook: drives the timer,
- * the live level bars, pause/resume, and the 5-minute hard limit from
- * the Weekly Submission spec ("Durasi Maks 5 Menit").
+ * the live level bars, pause/resume, and a hard duration limit -- 5 minutes
+ * by default (the Weekly Submission spec, "Durasi Maks 5 Menit"), or 30
+ * seconds for free-tier trial users (see app/(focus)/record/page.tsx).
  */
-export function useRecorder() {
+export function useRecorder(opts?: { maxSeconds?: number }) {
+  const MAX_SECONDS = opts?.maxSeconds ?? DEFAULT_MAX_SECONDS;
   const [status, setStatus] = useState<RecorderStatus>("idle");
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +137,7 @@ export function useRecorder() {
       setStatus("error");
       cleanup();
     }
-  }, [cleanup, tickLevels]);
+  }, [cleanup, tickLevels, MAX_SECONDS]);
 
   const pause = useCallback(() => {
     const r = mediaRecorderRef.current;

@@ -4,11 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
+import type { FaisalExpression } from "@/components/ui/FaisalAvatar";
 import { OnboardingIllustration } from "@/components/onboarding/OnboardingIllustration";
 
 type Question = {
   key: string;
-  icon: string;
+  sticker: FaisalExpression;
   tone: "primary" | "secondary" | "tertiary";
   title: string;
   options: { value: string; label: string }[];
@@ -17,7 +18,7 @@ type Question = {
 const QUESTIONS: Question[] = [
   {
     key: "experience_level",
-    icon: "military_tech",
+    sticker: "thinking-idea",
     tone: "primary",
     title: "Bagaimana kamu menilai kemampuan public speaking-mu saat ini?",
     options: [
@@ -29,7 +30,7 @@ const QUESTIONS: Question[] = [
   },
   {
     key: "practice_frequency",
-    icon: "calendar_month",
+    sticker: "speaking-confident",
     tone: "secondary",
     title: "Seberapa sering kamu tampil bicara di depan umum?",
     options: [
@@ -41,7 +42,7 @@ const QUESTIONS: Question[] = [
   },
   {
     key: "biggest_challenge",
-    icon: "psychology",
+    sticker: "confused",
     tone: "tertiary",
     title: "Apa tantangan terbesarmu saat bicara di depan umum?",
     options: [
@@ -53,7 +54,7 @@ const QUESTIONS: Question[] = [
   },
   {
     key: "speaking_context",
-    icon: "co_present",
+    sticker: "tip-mic",
     tone: "primary",
     title: "Di konteks apa kamu paling sering butuh public speaking?",
     options: [
@@ -65,7 +66,7 @@ const QUESTIONS: Question[] = [
   },
   {
     key: "weekly_commitment",
-    icon: "rocket_launch",
+    sticker: "cheering",
     tone: "secondary",
     title: "Berapa banyak waktu yang bisa kamu luangkan untuk latihan tiap minggu?",
     options: [
@@ -158,7 +159,7 @@ export function OnboardingView({ fullName }: { fullName: string | null }) {
           key={question.key}
           className="pop-in mt-8 flex-1 rounded-3xl border border-stroke-subtle bg-surface-card p-6 shadow-soft"
         >
-          <OnboardingIllustration icon={question.icon} tone={question.tone} />
+          <OnboardingIllustration sticker={question.sticker} tone={question.tone} />
 
           <p className="text-label-sm font-label-sm uppercase tracking-wide text-outline text-center">
             Pertanyaan {step + 1} dari {QUESTIONS.length}

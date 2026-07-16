@@ -87,8 +87,10 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || "Analisis rekaman Anda sudah selesai.",
+      icon: data.icon || "/stickers/faisal/cheering.png",
+      badge: "/icons/icon-192.png",
+      vibrate: [80, 40, 80],
       data: { url: data.url || "/history" },
-      badge: undefined,
       tag: "speaking-pro-analysis",
     }),
   );

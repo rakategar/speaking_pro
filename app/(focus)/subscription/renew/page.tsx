@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { BackButton } from "@/components/ui/BackButton";
+import { FaisalAvatar } from "@/components/ui/FaisalAvatar";
 import { formatRupiah } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,11 @@ export default async function RenewSubscriptionPage() {
         {/* Hero */}
         <div className="bg-gradient-to-br from-secondary-container to-secondary rounded-2xl p-6 shadow-[0_8px_30px_rgba(0,163,255,0.15)] relative overflow-hidden">
           <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/20 blur-3xl rounded-full pointer-events-none" />
+          <FaisalAvatar
+            expression="finger-heart"
+            size={80}
+            className="absolute -top-1 right-2 z-10"
+          />
           <div className="relative z-10 flex flex-col items-start">
             <div className="bg-white/20 backdrop-blur-md rounded-full px-3 py-1 mb-4 flex items-center gap-1.5 border border-white/30">
               <span
@@ -75,7 +81,7 @@ export default async function RenewSubscriptionPage() {
           </div>
           <div className="flex items-baseline gap-1">
             <span className="font-headline-lg-mobile text-headline-lg-mobile text-primary">
-              {formatRupiah(plan?.price_idr ?? 149000)}
+              {formatRupiah(plan?.price_idr ?? 75000)}
             </span>
             <span className="font-body-md text-body-md text-on-surface-variant">
               / bulan

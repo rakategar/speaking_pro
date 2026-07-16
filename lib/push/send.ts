@@ -25,6 +25,7 @@ export type PushPayload = {
   title: string;
   body: string;
   url: string;
+  icon?: string;
 };
 
 export async function sendPushToUser(

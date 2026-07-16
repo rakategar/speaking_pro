@@ -54,6 +54,7 @@ async function sendDailyReminders() {
       title: "Waktunya latihan 💪",
       body: "Anda belum latihan hari ini. 10 menit drill menjaga streak Anda tetap hidup!",
       url: "/dashboard",
+      icon: "/stickers/faisal/waving-mic.png",
     });
     sent += 1;
   }
@@ -118,10 +119,19 @@ async function processOne(): Promise<boolean> {
       })
       .eq("id", job.id);
     console.log(`[worker] job ${job.id} done (report ${reportId})`);
+    const { data: report } = await supabase
+      .from("reports")
+      .select("overall_score")
+      .eq("id", reportId)
+      .maybeSingle();
+    const score = report?.overall_score ?? 0;
+    const scoreSticker =
+      score >= 85 ? "celebrating" : score >= 65 ? "thumbs-up" : "tip-mic";
     await sendPushToUser(job.user_id, {
       title: "Analisis selesai 🎉",
       body: "Rapor latihan bicara Anda sudah siap. Ketuk untuk melihat hasilnya.",
       url: `/report/${job.recording_id}`,
+      icon: `/stickers/faisal/${scoreSticker}.png`,
     });
   } catch (error) {
     const message =

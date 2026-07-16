@@ -20,8 +20,27 @@ const PUBLIC_PATHS = [
 const ONBOARDING_PATH = "/onboarding";
 const ONBOARDING_API_PATH = "/api/onboarding";
 
+// Exempt from the trial hard-block below: Settings (contains logout, which
+// is a pure client-side supabase.auth.signOut() call with no server route)
+// and everything needed to actually complete an upgrade.
+const TRIAL_EXEMPT_PATHS = [
+  "/settings",
+  "/help",
+  "/api/help",
+  "/subscription/renew",
+  "/checkout",
+  "/api/checkout",
+  "/api/payments/subscription",
+];
+
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+}
+
+function isTrialExemptPath(pathname: string) {
+  return TRIAL_EXEMPT_PATHS.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
 }
@@ -75,7 +94,7 @@ export async function updateSession(request: NextRequest) {
   if (user && !isPublicPath(pathname)) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("onboarding_completed")
+      .select("onboarding_completed, subscription_tier, trial_ends_at")
       .eq("id", user.id)
       .maybeSingle();
     const onboarded = profile?.onboarding_completed ?? false;
@@ -93,6 +112,22 @@ export async function updateSession(request: NextRequest) {
     if (onboarded && pathname === ONBOARDING_PATH) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+
+    // Freemium 7-day trial hard block: once trial_ends_at has passed and
+    // the user hasn't upgraded, every route is locked except Settings
+    // (logout) and the upgrade flow itself.
+    if (
+      onboarded &&
+      profile?.subscription_tier !== "premium" &&
+      profile?.trial_ends_at &&
+      new Date(profile.trial_ends_at) < new Date() &&
+      !isTrialExemptPath(pathname)
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/subscription/renew";
       url.search = "";
       return NextResponse.redirect(url);
     }

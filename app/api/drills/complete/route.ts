@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getTrialStatus } from "@/lib/trial/status";
 
 // POST /api/drills/complete -- logs a finished local drill (AIUEO, pitch,
 // breathing) as a recordings row without audio, so it counts toward the
@@ -26,6 +27,21 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Modul tidak ditemukan" },
       { status: 404 },
+    );
+  }
+
+  // Defense in depth: the UI/route guards already prevent navigating to a
+  // locked module, but a free-tier trial user could still call this
+  // endpoint directly for a slug they haven't unlocked yet.
+  const trialStatus = await getTrialStatus(supabase, user.id);
+  if (
+    trialStatus.tier === "free" &&
+    moduleSlug !== "free-recording" &&
+    !trialStatus.unlockedSlugs.has(moduleSlug)
+  ) {
+    return NextResponse.json(
+      { error: "Modul ini belum terbuka." },
+      { status: 403 },
     );
   }
 
