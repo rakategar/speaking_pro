@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getTrialStatus } from "@/lib/trial/status";
-import { getRecordingQuota } from "@/lib/recording/quota";
+import {
+  getFreeRecordingUsage,
+  getRecordingQuota,
+} from "@/lib/recording/quota";
 
 // GET /api/trial/status -- thin client-facing wrapper around
 // getTrialStatus() for "use client" pages (Recording Studio, trial nudges)
@@ -31,10 +34,16 @@ export async function GET() {
       weekResetsAt: quota.weekResetsAt.toISOString(),
     });
   }
+  // Free tier gets a single lifetime recording; surfaced so the Studio can
+  // block up front instead of letting the user record then rejecting it.
+  const freeUsage = await getFreeRecordingUsage(supabase, user.id);
   return NextResponse.json({
     tier: "free" as const,
     trialDay: status.trialDay,
     isTrialExpired: status.isTrialExpired,
     maxRecordingSeconds: status.maxRecordingSeconds,
+    freeRecordingsUsed: freeUsage.used,
+    freeRecordingLimit: freeUsage.limit,
+    freeRecordingExhausted: freeUsage.exhausted,
   });
 }

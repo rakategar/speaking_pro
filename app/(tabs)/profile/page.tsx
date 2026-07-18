@@ -6,6 +6,7 @@ import { SubscribeMenuItem } from "@/components/payment/SubscribeMenuItem";
 import { TopUpQuotaMenuItem } from "@/components/payment/TopUpQuotaMenuItem";
 import { TopAppBar } from "@/components/layout/TopAppBar";
 import {
+  getFreeRecordingUsage,
   getRecordingQuota,
   TOPUP_BLOCK_SECONDS,
 } from "@/lib/recording/quota";
@@ -99,6 +100,8 @@ export default async function ProfilePage() {
   // The weekly recording budget only applies to Premium, so free users never
   // see a quota card or a top-up row.
   const quota = isPro ? await getRecordingQuota(supabase, user.id) : null;
+  // Free tier has a single lifetime recording rather than a weekly budget.
+  const freeUsage = isPro ? null : await getFreeRecordingUsage(supabase, user.id);
   const quotaUsedPct = quota
     ? Math.min(
         100,
@@ -387,6 +390,50 @@ export default async function ProfilePage() {
                 Kuota habis — tambah kuota di bawah untuk lanjut merekam.
               </p>
             )}
+          </section>
+        )}
+
+        {/* Free tier: one lifetime recording */}
+        {freeUsage && (
+          <section className="bg-surface-card rounded-3xl shadow-soft p-6 flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-title-lg text-title-lg text-primary">
+                  Kuota Rekaman
+                </h3>
+                <p className="font-label-sm text-label-sm text-text-secondary mt-0.5">
+                  Akun gratis • maks 30 detik
+                </p>
+              </div>
+              <span className="font-headline-md text-headline-md text-primary leading-none shrink-0">
+                {freeUsage.used}/{freeUsage.limit}
+                <span className="font-label-sm text-label-sm text-text-secondary block text-right mt-1">
+                  terpakai
+                </span>
+              </span>
+            </div>
+
+            <div className="h-2.5 rounded-full bg-surface-container overflow-hidden">
+              <div
+                className={
+                  freeUsage.exhausted
+                    ? "h-full bg-error rounded-full"
+                    : "h-full bg-secondary-container rounded-full"
+                }
+                style={{
+                  width: `${Math.max(
+                    Math.min(100, Math.round((freeUsage.used / freeUsage.limit) * 100)),
+                    2,
+                  )}%`,
+                }}
+              />
+            </div>
+
+            <p className="font-label-sm text-label-sm text-text-secondary">
+              {freeUsage.exhausted
+                ? "Rekaman gratis sudah terpakai — upgrade ke Premium untuk 5 menit setiap minggu."
+                : "Upgrade ke Premium untuk merekam hingga 5 menit setiap minggu."}
+            </p>
           </section>
         )}
 

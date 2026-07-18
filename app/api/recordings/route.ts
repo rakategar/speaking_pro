@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { getTrialStatus } from "@/lib/trial/status";
+import { getFreeRecordingUsage } from "@/lib/recording/quota";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -80,6 +81,24 @@ export async function POST(request: Request) {
       },
       { status: 400 },
     );
+  }
+
+  // Free tier gets exactly one studio recording, ever. Checked before the
+  // insert so the take is only spent on a recording that actually lands.
+  if (trialStatus.tier !== "premium") {
+    const freeUsage = await getFreeRecordingUsage(supabase, user.id);
+    if (freeUsage.exhausted) {
+      return NextResponse.json(
+        {
+          error:
+            "Anda sudah memakai 1 rekaman gratis. Berlangganan Premium untuk merekam hingga 5 menit setiap minggu.",
+          reason: "free_limit_reached",
+          used: freeUsage.used,
+          limit: freeUsage.limit,
+        },
+        { status: 402 },
+      );
+    }
   }
 
   // Premium spends a weekly duration budget (5 min) before dipping into any

@@ -62,6 +62,8 @@ function RecordingStudio() {
   // Premium's remaining weekly quota (weekly remainder + purchased seconds).
   // null = not premium or not loaded yet, so nothing is gated on it.
   const [quotaRemaining, setQuotaRemaining] = useState<number | null>(null);
+  // Free tier: their single lifetime recording is already spent.
+  const [freeExhausted, setFreeExhausted] = useState(false);
 
   const loadQuota = useCallback(() => {
     fetch("/api/trial/status")
@@ -69,6 +71,7 @@ function RecordingStudio() {
       .then((info) => {
         if (info?.tier === "free") {
           setMaxSeconds(info.maxRecordingSeconds ?? 30);
+          setFreeExhausted(Boolean(info.freeRecordingExhausted));
           return;
         }
         if (info?.tier === "premium") {
@@ -198,7 +201,8 @@ function RecordingStudio() {
       // 402 = quota spent. Refresh so the studio flips to the top-up overlay
       // instead of leaving the user staring at a bare error.
       if (uploadRes.status === 402) {
-        setQuotaRemaining(Number(uploadJson.weeklyRemainingSeconds ?? 0));
+        if (uploadJson.reason === "free_limit_reached") setFreeExhausted(true);
+        else setQuotaRemaining(Number(uploadJson.weeklyRemainingSeconds ?? 0));
         loadQuota();
         throw new Error(uploadJson.error ?? "Kuota rekaman habis");
       }
@@ -642,6 +646,44 @@ function RecordingStudio() {
               className="h-12 rounded-full border border-white/30 text-white font-semibold flex items-center justify-center"
             >
               Kembali ke Dashboard
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Blocked: the free tier's single lifetime recording is spent. */}
+      {phase === "studio" && !pendingQueue?.active && freeExhausted && (
+        <div className="fixed inset-0 z-40 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
+          <div className="pop-in">
+            <FaisalAvatar expression="inviting-mic" size={96} priority />
+          </div>
+          <div>
+            <p className="text-white font-heading text-title-lg font-bold">
+              Rekaman Gratis Anda Sudah Terpakai
+            </p>
+            <p className="text-white/70 text-sm mt-2 max-w-sm">
+              Akun gratis dapat{" "}
+              <span className="font-bold text-light-aqua">1 kali rekaman</span>.
+              Berlangganan Premium untuk merekam hingga{" "}
+              <span className="font-bold text-light-aqua">5 menit</span> setiap
+              minggu, lengkap dengan analisis AI penuh.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 w-full max-w-xs">
+            <Link
+              href="/subscription/renew"
+              className="h-12 rounded-full bg-white text-primary-container font-semibold flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                workspace_premium
+              </span>
+              Upgrade ke Premium
+            </Link>
+            <Link
+              href="/history"
+              className="h-12 rounded-full border border-white/30 text-white font-semibold flex items-center justify-center"
+            >
+              Lihat Rekaman Saya
             </Link>
           </div>
         </div>

@@ -18,6 +18,40 @@ export const TOPUP_BLOCK_SECONDS = 5 * 60;
 /** Product type of the top-up row in coaching_products. */
 export const TOPUP_PRODUCT_TYPE = "quota_topup";
 
+/**
+ * Free tier gets a single studio recording for the lifetime of the account --
+ * a taste of the analysis, then upgrade. Unlike the Premium budget this never
+ * resets, so it's a plain lifetime count rather than a windowed one.
+ */
+export const FREE_TIER_RECORDING_LIMIT = 1;
+
+export type FreeRecordingUsage = {
+  used: number;
+  limit: number;
+  exhausted: boolean;
+};
+
+export async function getFreeRecordingUsage(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<FreeRecordingUsage> {
+  // Same rule as the Premium quota: drill logs have a client-reported
+  // duration but no audio, so they aren't studio recordings and don't count.
+  // Uploads that fail delete their row, so they don't burn the free take.
+  const { count } = await supabase
+    .from("recordings")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .neq("status", DRILL_STATUS);
+
+  const used = count ?? 0;
+  return {
+    used,
+    limit: FREE_TIER_RECORDING_LIMIT,
+    exhausted: used >= FREE_TIER_RECORDING_LIMIT,
+  };
+}
+
 /** Drill logs have a client-reported duration but no audio; they don't spend quota. */
 const DRILL_STATUS = "drill_completed";
 
