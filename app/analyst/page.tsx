@@ -999,6 +999,7 @@ const TABS: { id: Tab; label: string }[] = [
 
 export default function AnalystPage() {
   const [authed, setAuthed] = useState(false);
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -1041,10 +1042,11 @@ export default function AnalystPage() {
     const res = await fetch("/api/analyst/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ username, password }),
     });
     if (!res.ok) {
-      setError("Password salah");
+      const json = await res.json().catch(() => ({}));
+      setError(json.error ?? "Username atau password salah");
       return;
     }
     await fetchMetrics();
@@ -1064,13 +1066,22 @@ export default function AnalystPage() {
           <p className="mt-1 text-sm text-text-secondary">
             Monitoring beban sistem &amp; pipeline analisis suara.
           </p>
-          <div className="relative mt-6">
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Username"
+            autoComplete="username"
+            autoFocus
+            className="mt-6 w-full rounded-2xl border border-outline-variant bg-surface-card px-4 py-3 text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary-container/30"
+          />
+          <div className="relative mt-3">
             <input
               type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              autoFocus
+              autoComplete="current-password"
               className="w-full rounded-2xl border border-outline-variant bg-surface-card px-4 py-3 pr-12 text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary-container/30"
             />
             <button
