@@ -128,6 +128,39 @@ export type Database = {
         }
         Relationships: []
       }
+      redeem_tickets: {
+        Row: {
+          id: string
+          code: string
+          batch_label: string | null
+          duration_days: number
+          status: string
+          redeemed_by: string | null
+          redeemed_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          batch_label?: string | null
+          duration_days: number
+          status?: string
+          redeemed_by?: string | null
+          redeemed_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          code?: string
+          batch_label?: string | null
+          duration_days?: number
+          status?: string
+          redeemed_by?: string | null
+          redeemed_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       problem_reports: {
         Row: {
           id: string

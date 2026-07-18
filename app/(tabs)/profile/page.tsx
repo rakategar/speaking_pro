@@ -4,6 +4,7 @@ import { SignOutButton } from "@/components/profile/SignOutButton";
 import { InstallPwa } from "@/components/pwa/InstallPwa";
 import { SubscribeMenuItem } from "@/components/payment/SubscribeMenuItem";
 import { TopUpQuotaMenuItem } from "@/components/payment/TopUpQuotaMenuItem";
+import { RedeemTicketCard } from "@/components/subscription/RedeemTicketCard";
 import { TopAppBar } from "@/components/layout/TopAppBar";
 import {
   getFreeRecordingUsage,
@@ -436,6 +437,9 @@ export default async function ProfilePage() {
             </p>
           </section>
         )}
+
+        {/* Redeem ticket -> free Premium access */}
+        <RedeemTicketCard />
 
         {/* Menu */}
         <section className="bg-surface-card rounded-3xl shadow-soft mt-2 overflow-hidden">

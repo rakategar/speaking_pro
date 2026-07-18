@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/ui/Logo";
+import { TicketGenerateSection } from "@/components/analyst/TicketGenerateSection";
+import { TicketHistorySection } from "@/components/analyst/TicketHistorySection";
 
 type StageStat = {
   count: number;
@@ -985,7 +987,15 @@ function UserManagementSection() {
 // Page
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "monitoring" | "users" | "laporan";
+type Tab = "monitoring" | "users" | "laporan" | "tiket" | "riwayat-tiket";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "monitoring", label: "Monitoring" },
+  { id: "users", label: "Manajemen User" },
+  { id: "laporan", label: "Laporan Masalah" },
+  { id: "tiket", label: "Generate Ticket" },
+  { id: "riwayat-tiket", label: "Riwayat Ticket" },
+];
 
 export default function AnalystPage() {
   const [authed, setAuthed] = useState(false);
@@ -995,6 +1005,9 @@ export default function AnalystPage() {
   const [data, setData] = useState<Metrics | null>(null);
   const [paused, setPaused] = useState(false);
   const [tab, setTab] = useState<Tab>("monitoring");
+  // Bumped after a generate so the history tab refetches instead of showing
+  // a stale list when the admin switches over to check the new batch.
+  const [ticketReload, setTicketReload] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchMetrics = useCallback(async () => {
@@ -1120,13 +1133,7 @@ export default function AnalystPage() {
 
         {/* ---- tabs ---- */}
         <div className="flex gap-2 border-b border-stroke-subtle">
-          {(
-            [
-              { id: "monitoring", label: "Monitoring" },
-              { id: "users", label: "Manajemen User" },
-              { id: "laporan", label: "Laporan Masalah" },
-            ] as { id: Tab; label: string }[]
-          ).map((t) => (
+          {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
@@ -1282,6 +1289,12 @@ export default function AnalystPage() {
           </div>
         ) : tab === "users" ? (
           <UserManagementSection />
+        ) : tab === "tiket" ? (
+          <TicketGenerateSection
+            onGenerated={() => setTicketReload((n) => n + 1)}
+          />
+        ) : tab === "riwayat-tiket" ? (
+          <TicketHistorySection reloadKey={ticketReload} />
         ) : (
           <ProblemReportsSection />
         )}
