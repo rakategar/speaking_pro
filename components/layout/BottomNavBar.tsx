@@ -30,6 +30,7 @@ export function BottomNavBar() {
           <Link
             key={tab.href}
             href={tab.href}
+            data-tutorial={`nav-${tab.label.toLowerCase()}`}
             className={cn(
               "flex items-center justify-center p-3 rounded-full transition-all duration-300 ease-out active:scale-90",
               active

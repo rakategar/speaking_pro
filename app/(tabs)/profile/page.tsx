@@ -3,7 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/profile/SignOutButton";
 import { InstallPwa } from "@/components/pwa/InstallPwa";
 import { SubscribeMenuItem } from "@/components/payment/SubscribeMenuItem";
+import { TopUpQuotaMenuItem } from "@/components/payment/TopUpQuotaMenuItem";
 import { TopAppBar } from "@/components/layout/TopAppBar";
+import {
+  getRecordingQuota,
+  TOPUP_BLOCK_SECONDS,
+} from "@/lib/recording/quota";
+import { formatRupiah } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +95,41 @@ export default async function ProfilePage() {
   const ringCircumference = 2 * Math.PI * 34;
 
   const isPro = profile?.subscription_tier === "premium";
+
+  // The weekly recording budget only applies to Premium, so free users never
+  // see a quota card or a top-up row.
+  const quota = isPro ? await getRecordingQuota(supabase, user.id) : null;
+  const quotaUsedPct = quota
+    ? Math.min(
+        100,
+        Math.round(
+          (quota.weeklyUsedSeconds / quota.weeklyAllowanceSeconds) * 100,
+        ),
+      )
+    : 0;
+  const fmtMinutes = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.round(seconds % 60);
+    return s === 0 ? `${m} mnt` : `${m} mnt ${s} dtk`;
+  };
+  const quotaResetLabel = quota
+    ? quota.weekResetsAt.toLocaleDateString("id-ID", {
+        weekday: "long",
+        day: "numeric",
+        month: "short",
+      })
+    : null;
+
+  const { data: topupProduct } = isPro
+    ? await supabase
+        .from("coaching_products")
+        .select("price_idr")
+        .eq("type", "quota_topup")
+        .order("price_idr")
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
   const renews = profile?.subscription_renews_at
     ? new Date(profile.subscription_renews_at).toLocaleDateString("id-ID", {
         day: "numeric",
@@ -292,6 +333,63 @@ export default async function ProfilePage() {
           </div>
         </div>
 
+        {/* Weekly recording quota (Premium only) */}
+        {quota && (
+          <section className="bg-surface-card rounded-3xl shadow-soft p-6 flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-title-lg text-title-lg text-primary">
+                  Kuota Rekaman Mingguan
+                </h3>
+                <p className="font-label-sm text-label-sm text-text-secondary mt-0.5">
+                  Reset {quotaResetLabel}
+                </p>
+              </div>
+              <span className="font-headline-md text-headline-md text-primary leading-none shrink-0">
+                {fmtMinutes(quota.weeklyRemainingSeconds)}
+                <span className="font-label-sm text-label-sm text-text-secondary block text-right mt-1">
+                  tersisa
+                </span>
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <div className="h-2.5 rounded-full bg-surface-container overflow-hidden">
+                <div
+                  className={
+                    quotaUsedPct >= 100
+                      ? "h-full bg-error rounded-full"
+                      : "h-full bg-secondary-container rounded-full"
+                  }
+                  style={{ width: `${Math.max(quotaUsedPct, 2)}%` }}
+                />
+              </div>
+              <p className="font-label-sm text-label-sm text-text-secondary">
+                {fmtMinutes(quota.weeklyUsedSeconds)} /{" "}
+                {fmtMinutes(quota.weeklyAllowanceSeconds)} terpakai minggu ini
+              </p>
+            </div>
+
+            {quota.topupSecondsBalance > 0 && (
+              <div className="flex items-center gap-2 rounded-xl bg-tertiary-fixed-dim/10 px-3 py-2">
+                <span className="material-symbols-outlined text-[18px] text-on-tertiary-container">
+                  more_time
+                </span>
+                <p className="font-label-sm text-label-sm text-on-tertiary-container">
+                  +{fmtMinutes(quota.topupSecondsBalance)} kuota tambahan (tidak
+                  hangus)
+                </p>
+              </div>
+            )}
+
+            {quota.totalRemainingSeconds <= 0 && (
+              <p className="font-label-sm text-label-sm text-text-secondary">
+                Kuota habis — tambah kuota di bawah untuk lanjut merekam.
+              </p>
+            )}
+          </section>
+        )}
+
         {/* Menu */}
         <section className="bg-surface-card rounded-3xl shadow-soft mt-2 overflow-hidden">
           <ul className="divide-y divide-surface-container">
@@ -329,6 +427,12 @@ export default async function ProfilePage() {
               </li>
             ))}
             <SubscribeMenuItem isPro={isPro} renewsLabel={renews} />
+            {isPro && (
+              <TopUpQuotaMenuItem
+                topupMinutes={Math.round(TOPUP_BLOCK_SECONDS / 60)}
+                priceLabel={formatRupiah(topupProduct?.price_idr ?? 25000)}
+              />
+            )}
             <InstallPwa />
           </ul>
         </section>

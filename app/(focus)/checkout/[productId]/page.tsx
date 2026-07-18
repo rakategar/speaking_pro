@@ -11,12 +11,23 @@ export default async function CheckoutPage({
 }) {
   const { productId } = await params;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { data: product } = await supabase
     .from("coaching_products")
     .select("id, title, type, price_idr, description, coaches(name)")
     .eq("id", productId)
     .maybeSingle();
   if (!product) notFound();
+
+  const { data: profile } = user
+    ? await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle()
+    : { data: null };
 
   return (
     <CheckoutForm
@@ -28,6 +39,8 @@ export default async function CheckoutPage({
         description: product.description,
         coachName: product.coaches?.name ?? null,
       }}
+      defaultName={profile?.full_name ?? ""}
+      defaultEmail={user?.email ?? ""}
     />
   );
 }

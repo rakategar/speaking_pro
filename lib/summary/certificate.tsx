@@ -20,13 +20,13 @@ const BADGE_LABEL: Record<BadgeTier, string> = {
 };
 const badgeBuffers: Record<BadgeTier, Buffer> = {
   gold: fs.readFileSync(
-    path.join(process.cwd(), "public", "stickers", "faisal", BADGE_STICKER.gold),
+    path.join(process.cwd(), "public", "stickers", "faisal-v2", BADGE_STICKER.gold),
   ),
   silver: fs.readFileSync(
-    path.join(process.cwd(), "public", "stickers", "faisal", BADGE_STICKER.silver),
+    path.join(process.cwd(), "public", "stickers", "faisal-v2", BADGE_STICKER.silver),
   ),
   bronze: fs.readFileSync(
-    path.join(process.cwd(), "public", "stickers", "faisal", BADGE_STICKER.bronze),
+    path.join(process.cwd(), "public", "stickers", "faisal-v2", BADGE_STICKER.bronze),
   ),
 };
 

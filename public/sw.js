@@ -1,7 +1,7 @@
 // Speaking Pro service worker: web push notifications for finished analyses
 // + PWA asset caching with an elegant offline fallback.
 
-const STATIC_CACHE = "sp-static-v1";
+const STATIC_CACHE = "sp-static-v2";
 
 const OFFLINE_HTML = `<!doctype html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -87,7 +87,7 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || "Analisis rekaman Anda sudah selesai.",
-      icon: data.icon || "/stickers/faisal/cheering.png",
+      icon: data.icon || "/stickers/faisal-v2/cheering.png",
       badge: "/icons/icon-192.png",
       vibrate: [80, 40, 80],
       data: { url: data.url || "/history" },

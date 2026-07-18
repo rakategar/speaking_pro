@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/email/send";
+import { welcomeEmail } from "@/lib/email/templates";
 
 const REQUIRED_KEYS = [
   "experience_level",
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("subscription_tier, trial_started_at")
+    .select("subscription_tier, trial_started_at, onboarding_completed, full_name")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -62,6 +64,14 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Welcome email, once per user: only on the false->true onboarding
+  // transition. Fire-and-forget -- sendEmail swallows its own errors, so a
+  // mail failure never affects the onboarding response.
+  if (!profile?.onboarding_completed && user.email) {
+    const { subject, html } = welcomeEmail(profile?.full_name ?? null);
+    await sendEmail({ to: user.email, subject, html });
   }
 
   return NextResponse.json({ ok: true });

@@ -10,13 +10,13 @@ import {
   renderMonthlyCertificatePdf,
   badgeTierFromScore,
 } from "@/lib/summary/certificate";
-import { sendPushToUser } from "@/lib/push/send";
+import { notifyUser } from "@/lib/notifications/notify";
 
 const PROGRAM_DAYS = 30;
 const BADGE_ICON: Record<string, string> = {
-  gold: "/stickers/faisal/celebrating.png",
-  silver: "/stickers/faisal/thumbs-up.png",
-  bronze: "/stickers/faisal/tip-mic.png",
+  gold: "/stickers/faisal-v2/celebrating.png",
+  silver: "/stickers/faisal-v2/thumbs-up.png",
+  bronze: "/stickers/faisal-v2/tip-mic.png",
 };
 
 export async function generateMonthlyCertificates() {
@@ -106,7 +106,8 @@ export async function generateMonthlyCertificates() {
       badge_tier: badgeTier,
     });
 
-    await sendPushToUser(profile.id, {
+    await notifyUser(supabase, profile.id, {
+      type: "certificate",
       title: "Sertifikat 1 Bulan siap 🏆",
       body: "Selamat! Sertifikat pencapaian 1 bulan Premium Anda sudah bisa diunduh.",
       url: "/summaries",

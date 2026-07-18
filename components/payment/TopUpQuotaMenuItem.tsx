@@ -1,0 +1,105 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { loadSnapJs } from "@/lib/payments/snap";
+
+// Premium-only menu row on /profile that buys one 5-minute recording top-up.
+// Mirrors SubscribeMenuItem: Snap opens straight from the row (no checkout
+// page, since a top-up needs no contact or shipping details), then the order
+// is re-checked server-side and the page refreshed so the quota card updates.
+export function TopUpQuotaMenuItem({
+  topupMinutes,
+  priceLabel,
+}: {
+  topupMinutes: number;
+  priceLabel: string;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const orderIdRef = useRef<string | null>(null);
+
+  async function confirmStatus() {
+    if (!orderIdRef.current) return;
+    try {
+      const res = await fetch("/api/payments/checkout/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: orderIdRef.current }),
+      });
+      const json = await res.json();
+      if (json.status === "paid") {
+        setMessage(`Berhasil — kuota +${topupMinutes} menit sudah masuk 🎉`);
+        router.refresh();
+      } else if (json.status === "pending") {
+        setMessage("Pembayaran diproses. Kuota masuk otomatis setelah lunas.");
+      } else if (json.status === "failed") {
+        setMessage("Pembayaran dibatalkan / gagal.");
+      }
+    } catch {
+      // The webhook still reconciles the order server-side.
+    }
+  }
+
+  async function startPayment() {
+    if (busy) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/payments/quota-topup", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) {
+        setMessage(json.error ?? `Gagal memulai pembayaran (HTTP ${res.status})`);
+        return;
+      }
+      orderIdRef.current = json.orderId;
+      await loadSnapJs(json.snapJsUrl, json.clientKey);
+      window.snap!.pay(json.token, {
+        onSuccess: () => void confirmStatus(),
+        onPending: () => void confirmStatus(),
+        onError: () => setMessage("Pembayaran gagal. Coba lagi."),
+        onClose: () => void confirmStatus(),
+      });
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Terjadi kesalahan");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={startPayment}
+        disabled={busy}
+        className="w-full px-6 flex items-center justify-between hover:bg-surface-container-lowest transition-colors group py-3 disabled:opacity-60 text-left"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 rounded-full bg-tertiary-fixed-dim/10 flex items-center justify-center text-on-tertiary-container">
+            <span className="material-symbols-outlined text-[20px]">
+              more_time
+            </span>
+          </div>
+          <div className="flex flex-col items-start">
+            <span className="font-label-md text-label-md text-primary">
+              Tambah Kuota Rekaman
+            </span>
+            <span className="font-label-sm text-label-sm text-secondary-container">
+              {`+${topupMinutes} menit • ${priceLabel}`}
+            </span>
+            {message ? (
+              <span className="font-label-sm text-label-sm text-on-surface-variant mt-1">
+                {message}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <span className="material-symbols-outlined text-on-surface-variant">
+          {busy ? "hourglass_top" : "chevron_right"}
+        </span>
+      </button>
+    </li>
+  );
+}

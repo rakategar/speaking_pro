@@ -35,6 +35,7 @@ export interface SnapTransactionInput {
   itemName: string;
   customerName: string;
   customerEmail: string;
+  itemId?: string;
 }
 
 // Creates a Snap transaction. `enabled_payments` is intentionally omitted
@@ -54,7 +55,7 @@ export async function createSnapTransaction(input: SnapTransactionInput) {
       },
       item_details: [
         {
-          id: "subscription-monthly",
+          id: input.itemId ?? "subscription-monthly",
           price: input.grossAmount,
           quantity: 1,
           name: input.itemName.slice(0, 50),

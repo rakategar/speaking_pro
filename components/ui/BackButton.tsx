@@ -1,21 +1,26 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useGoBack } from "@/components/ui/useGoBack";
 
 export function BackButton() {
-  const router = useRouter();
-  // Fallback for first-entry history (PWA launch / deep link), where
-  // router.back() would silently do nothing.
+  const { goBack, navigating } = useGoBack();
   return (
     <button
       type="button"
       aria-label="Kembali"
-      onClick={() =>
-        window.history.length > 1 ? router.back() : router.push("/dashboard")
-      }
-      className="p-2 -ml-2 text-on-surface hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center active:scale-95"
+      aria-busy={navigating}
+      onClick={goBack}
+      className="p-2 -ml-2 text-on-surface hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center active:scale-95 disabled:opacity-100"
     >
-      <span className="material-symbols-outlined">arrow_back</span>
+      <span
+        className={
+          navigating
+            ? "material-symbols-outlined opacity-60 transition-opacity"
+            : "material-symbols-outlined transition-opacity"
+        }
+      >
+        arrow_back
+      </span>
     </button>
   );
 }

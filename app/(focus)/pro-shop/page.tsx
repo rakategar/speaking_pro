@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TopAppBar } from "@/components/layout/TopAppBar";
+import { ShopCardImage } from "@/components/shop/ShopCardImage";
 import { formatRupiahCompact } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
+// Video Course is sold on an external landing page, not through in-app checkout.
+const VIDEO_COURSE_URL = "https://faisalmaulana.id/mmps";
+
 const TYPE_BADGE: Record<string, string> = {
-  ebook: "E-Book",
-  video_course: "Video Course",
+  ebook: "Buku Fisik",
+  video_course: "E-Course",
   "1on1": "Exclusive Service",
   subscription: "Subscription",
 };
@@ -19,12 +23,21 @@ const TYPE_ICON: Record<string, string> = {
   subscription: "workspace_premium",
 };
 
+const TYPE_IMAGE: Record<string, string> = {
+  ebook: "/img/shop/ebook.webp",
+  video_course: "/img/shop/video-course.webp",
+  "1on1": "/img/shop/1on1.webp",
+};
+
 export default async function ProShopPage() {
   const supabase = await createClient();
   const { data: products } = await supabase
     .from("coaching_products")
     .select("id, title, type, price_idr, description, coaches(name, headline)")
-    .neq("type", "subscription")
+    // Subscription is sold on /subscription/renew; the recording top-up is
+    // sold from the profile menu (Premium-only) -- neither belongs in the
+    // Pro Shop catalogue.
+    .not("type", "in", "(subscription,quota_topup)")
     .order("price_idr");
 
   const coachName = products?.[0]?.coaches?.name ?? "Coach Faisal Maulana";
@@ -57,23 +70,11 @@ export default async function ProShopPage() {
                 {isExclusive && (
                   <div className="absolute -right-16 -top-16 w-48 h-48 bg-tertiary-fixed-dim/20 blur-3xl rounded-full pointer-events-none" />
                 )}
-                <div
-                  className={
-                    isExclusive
-                      ? "w-full h-40 rounded-xl mb-6 bg-white/5 border border-white/10 flex items-center justify-center"
-                      : "w-full h-40 rounded-xl mb-6 bg-surface-container-low flex items-center justify-center"
-                  }
-                >
-                  <span
-                    className={
-                      isExclusive
-                        ? "material-symbols-outlined text-tertiary-fixed-dim text-[64px]"
-                        : "material-symbols-outlined text-secondary-container text-[64px]"
-                    }
-                  >
-                    {TYPE_ICON[p.type] ?? "storefront"}
-                  </span>
-                </div>
+                <ShopCardImage
+                  src={TYPE_IMAGE[p.type] ?? null}
+                  icon={TYPE_ICON[p.type] ?? "storefront"}
+                  exclusive={isExclusive}
+                />
                 <div className="flex-grow relative z-10">
                   <div className="flex items-center gap-2 mb-3">
                     <span
@@ -145,19 +146,33 @@ export default async function ProShopPage() {
                       </span>
                     </div>
                   </div>
-                  <Link
-                    href={`/checkout/${p.id}`}
-                    className={
-                      isExclusive
-                        ? "w-full bg-tertiary-fixed-dim text-primary-container py-3 px-4 rounded-xl font-label-md text-label-md flex justify-center items-center gap-2 font-bold shadow-[0_0_15px_rgba(0,218,243,0.4)] hover:opacity-90 active:scale-95 transition"
-                        : "w-full bg-primary-container text-on-primary py-3 px-4 rounded-xl font-label-md text-label-md flex justify-center items-center gap-2 hover:opacity-90 active:scale-95 transition"
-                    }
-                  >
-                    {isExclusive ? "Jadwalkan Sekarang" : "Beli Sekarang"}
-                    <span className="material-symbols-outlined text-sm">
-                      {isExclusive ? "calendar_today" : "arrow_forward"}
-                    </span>
-                  </Link>
+                  {p.type === "video_course" ? (
+                    <a
+                      href={VIDEO_COURSE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full bg-primary-container text-on-primary py-3 px-4 rounded-xl font-label-md text-label-md flex justify-center items-center gap-2 hover:opacity-90 active:scale-95 transition"
+                    >
+                      Pelajari Sekarang
+                      <span className="material-symbols-outlined text-sm">
+                        open_in_new
+                      </span>
+                    </a>
+                  ) : (
+                    <Link
+                      href={`/checkout/${p.id}`}
+                      className={
+                        isExclusive
+                          ? "w-full bg-tertiary-fixed-dim text-primary-container py-3 px-4 rounded-xl font-label-md text-label-md flex justify-center items-center gap-2 font-bold shadow-[0_0_15px_rgba(0,218,243,0.4)] hover:opacity-90 active:scale-95 transition"
+                          : "w-full bg-primary-container text-on-primary py-3 px-4 rounded-xl font-label-md text-label-md flex justify-center items-center gap-2 hover:opacity-90 active:scale-95 transition"
+                      }
+                    >
+                      {isExclusive ? "Jadwalkan Sekarang" : "Beli Sekarang"}
+                      <span className="material-symbols-outlined text-sm">
+                        {isExclusive ? "calendar_today" : "arrow_forward"}
+                      </span>
+                    </Link>
+                  )}
                 </div>
               </article>
             );

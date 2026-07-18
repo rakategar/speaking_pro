@@ -161,29 +161,51 @@ export type Database = {
       bookings: {
         Row: {
           created_at: string
+          customer_whatsapp: string | null
+          domicile: string | null
           id: string
+          order_id: string | null
+          preferred_dates: Json | null
           product_id: string | null
           scheduled_at: string | null
           status: string
+          topic: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
+          customer_whatsapp?: string | null
+          domicile?: string | null
           id?: string
+          order_id?: string | null
+          preferred_dates?: Json | null
           product_id?: string | null
           scheduled_at?: string | null
           status?: string
+          topic?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
+          customer_whatsapp?: string | null
+          domicile?: string | null
           id?: string
+          order_id?: string | null
+          preferred_dates?: Json | null
           product_id?: string | null
           scheduled_at?: string | null
           status?: string
+          topic?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_product_id_fkey"
             columns: ["product_id"]
@@ -229,6 +251,7 @@ export type Database = {
           coach_id: string | null
           created_at: string
           description: string | null
+          fulfillment_url: string | null
           id: string
           price_idr: number
           title: string
@@ -238,6 +261,7 @@ export type Database = {
           coach_id?: string | null
           created_at?: string
           description?: string | null
+          fulfillment_url?: string | null
           id?: string
           price_idr: number
           title: string
@@ -247,6 +271,7 @@ export type Database = {
           coach_id?: string | null
           created_at?: string
           description?: string | null
+          fulfillment_url?: string | null
           id?: string
           price_idr?: number
           title?: string
@@ -266,30 +291,48 @@ export type Database = {
         Row: {
           amount_idr: number
           created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_whatsapp: string | null
           id: string
           payment_method: string | null
           product_id: string | null
           product_type: string
+          shipping_address: string | null
+          shipping_city: string | null
+          shipping_postal_code: string | null
           status: string
           user_id: string
         }
         Insert: {
           amount_idr: number
           created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_whatsapp?: string | null
           id?: string
           payment_method?: string | null
           product_id?: string | null
           product_type: string
+          shipping_address?: string | null
+          shipping_city?: string | null
+          shipping_postal_code?: string | null
           status?: string
           user_id: string
         }
         Update: {
           amount_idr?: number
           created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_whatsapp?: string | null
           id?: string
           payment_method?: string | null
           product_id?: string | null
           product_type?: string
+          shipping_address?: string | null
+          shipping_city?: string | null
+          shipping_postal_code?: string | null
           status?: string
           user_id?: string
         }
@@ -348,13 +391,17 @@ export type Database = {
           occupation: string | null
           onboarding_answers: Json
           onboarding_completed: boolean
+          renewal_reminder_sent_at: string | null
           streak_count: number
           subscription_renews_at: string | null
           subscription_started_at: string | null
           subscription_tier: string
+          topup_seconds_balance: number
           trial_ends_at: string | null
           trial_nudges_seen: Json
+          trial_reminder_sent_at: string | null
           trial_started_at: string | null
+          tutorial_completed: boolean
         }
         Insert: {
           avatar_url?: string | null
@@ -364,13 +411,17 @@ export type Database = {
           occupation?: string | null
           onboarding_answers?: Json
           onboarding_completed?: boolean
+          renewal_reminder_sent_at?: string | null
           streak_count?: number
           subscription_renews_at?: string | null
           subscription_started_at?: string | null
           subscription_tier?: string
+          topup_seconds_balance?: number
           trial_ends_at?: string | null
           trial_nudges_seen?: Json
+          trial_reminder_sent_at?: string | null
           trial_started_at?: string | null
+          tutorial_completed?: boolean
         }
         Update: {
           avatar_url?: string | null
@@ -380,13 +431,17 @@ export type Database = {
           occupation?: string | null
           onboarding_answers?: Json
           onboarding_completed?: boolean
+          renewal_reminder_sent_at?: string | null
           streak_count?: number
           subscription_renews_at?: string | null
           subscription_started_at?: string | null
           subscription_tier?: string
+          topup_seconds_balance?: number
           trial_ends_at?: string | null
           trial_nudges_seen?: Json
+          trial_reminder_sent_at?: string | null
           trial_started_at?: string | null
+          tutorial_completed?: boolean
         }
         Relationships: []
       }
@@ -458,6 +513,47 @@ export type Database = {
           created_at?: string
         }
         Relationships: []
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          title: string
+          body: string | null
+          url: string | null
+          read_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          title: string
+          body?: string | null
+          url?: string | null
+          read_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          title?: string
+          body?: string | null
+          url?: string | null
+          read_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recordings: {
         Row: {
@@ -610,7 +706,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      consume_recording_quota: {
+        Args: { p_user_id: string; p_seconds: number }
+        Returns: {
+          allowed: boolean
+          weekly_remaining: number
+          topup_balance: number
+          debited: number
+        }[]
+      }
+      add_topup_seconds: {
+        Args: { p_user_id: string; p_seconds: number }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

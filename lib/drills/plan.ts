@@ -90,3 +90,20 @@ export function jakartaStartOfToday(now: Date = new Date()): Date {
   }).format(now);
   return new Date(`${ymd}T00:00:00+07:00`);
 }
+
+/**
+ * Monday 00:00 (Asia/Jakarta) as a Date -- the window the weekly recording
+ * quota resets on. Mirrors the SQL `public.jakarta_week_start()` used by
+ * consume_recording_quota, so the UI and the debit agree on when the week
+ * turns over. (The dashboard's streak week is server-local and separate.)
+ */
+export function jakartaStartOfWeek(now: Date = new Date()): Date {
+  const ymd = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+  }).format(now);
+  // Weekday of that Jakarta calendar day, re-indexed so Monday = 0.
+  const mondayOffset = (new Date(`${ymd}T00:00:00Z`).getUTCDay() + 6) % 7;
+  const start = new Date(`${ymd}T00:00:00+07:00`);
+  start.setUTCDate(start.getUTCDate() - mondayOffset);
+  return start;
+}

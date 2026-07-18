@@ -319,24 +319,20 @@ html.fonts-loaded .material-symbols-outlined {
   animation: lock-wiggle 3.5s ease-in-out infinite;
 }
 
-/* Directional page transitions: slide+fade, mirrored for back navigation. */
-@keyframes page-slide-fwd {
+/* Page transitions are opacity-only. A transform on the page wrapper (even a
+   lingering identity matrix left by animation-fill-mode: both) turns it into
+   the containing block for the fixed TopAppBar rendered inside each page --
+   the header then scrolls away with the content and the back button becomes
+   unreachable on any screen tall enough to scroll. Keep these fades
+   transform-free, per the .page-enter note above. */
+@keyframes page-fade-in {
   from {
     opacity: 0;
-    transform: translateX(28px);
   }
 }
-.page-slide-fwd {
-  animation: page-slide-fwd 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-@keyframes page-slide-back {
-  from {
-    opacity: 0;
-    transform: translateX(-28px);
-  }
-}
+.page-slide-fwd,
 .page-slide-back {
-  animation: page-slide-back 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: page-fade-in 0.28s ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -354,7 +350,8 @@ html.fonts-loaded .material-symbols-outlined {
   .blur-breathe,
   .wiggle-lock,
   .page-slide-fwd,
-  .page-slide-back {
+  .page-slide-back,
+  .tutorial-wave {
     animation: none !important;
   }
 }
@@ -382,6 +379,28 @@ html.fonts-loaded .material-symbols-outlined {
   border: 1px solid var(--color-stroke-subtle);
   box-shadow: 0 4px 20px rgba(0, 163, 255, 0.05);
   border-radius: 24px;
+}
+
+/* Post-onboarding tutorial: expanding wave rings around the spotlighted
+   element (components/tutorial/TutorialOverlay.tsx) */
+@keyframes tutorial-wave {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  70% {
+    opacity: 0.25;
+  }
+  100% {
+    transform: scale(1.12);
+    opacity: 0;
+  }
+}
+.tutorial-wave {
+  animation: tutorial-wave 1.6s ease-out infinite;
+}
+.tutorial-wave-delayed {
+  animation-delay: 0.8s;
 }
 
 /* Mic button pulse glow (Recording Studio) */

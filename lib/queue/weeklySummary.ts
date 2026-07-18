@@ -7,7 +7,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { jakartaDayIndex } from "@/lib/drills/plan";
 import { renderWeeklySummaryPdf } from "@/lib/summary/pdf";
-import { sendPushToUser } from "@/lib/push/send";
+import { notifyUser } from "@/lib/notifications/notify";
 
 export async function generateWeeklySummaries() {
   const supabase = createServiceRoleClient();
@@ -97,11 +97,12 @@ export async function generateWeeklySummaries() {
       session_count: recordings?.length ?? 0,
     });
 
-    await sendPushToUser(profile.id, {
+    await notifyUser(supabase, profile.id, {
+      type: "summary",
       title: "Ringkasan mingguan siap 📄",
       body: "Laporan latihan mingguan Anda sudah bisa diunduh.",
       url: "/summaries",
-      icon: "/stickers/faisal/celebrating.png",
+      icon: "/stickers/faisal-v2/celebrating.png",
     });
 
     console.log(`[weeklySummary] generated week ${weekIndex} for user ${profile.id}`);

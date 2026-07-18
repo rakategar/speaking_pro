@@ -6,7 +6,11 @@ import {
   isPaidStatus,
   midtransConfigured,
 } from "@/lib/payments/midtrans";
-import { activatePremium } from "@/lib/subscription/activate";
+import {
+  activatePremium,
+  getProductTitle,
+  notifySubscriptionPaymentFailed,
+} from "@/lib/subscription/activate";
 
 // POST /api/payments/subscription/status { orderId } -- re-check the order
 // against Midtrans and activate the subscription when paid. Called from the
@@ -33,7 +37,9 @@ export async function POST(request: Request) {
   // RLS "own orders" guarantees this only matches the caller's order.
   const { data: order } = await supabase
     .from("orders")
-    .select("id, status, product_type")
+    .select(
+      "id, status, product_type, amount_idr, payment_method, created_at, product_id",
+    )
     .eq("id", orderId)
     .eq("product_type", "subscription")
     .maybeSingle();
@@ -50,14 +56,22 @@ export async function POST(request: Request) {
     if (order.status !== "paid") {
       const renewsAt = new Date();
       renewsAt.setDate(renewsAt.getDate() + 30);
+      const paymentMethod = status.payment_type ?? "midtrans";
       await supabase
         .from("orders")
         .update({
           status: "paid",
-          payment_method: status.payment_type ?? "midtrans",
+          payment_method: paymentMethod,
         })
         .eq("id", order.id);
-      await activatePremium(supabase, user.id, renewsAt);
+      const productTitle = await getProductTitle(supabase, order.product_id);
+      await activatePremium(supabase, user.id, renewsAt, user.email, {
+        orderId: order.id,
+        amountIdr: order.amount_idr,
+        paymentMethod,
+        createdAt: new Date(order.created_at),
+        productTitle,
+      });
     }
     return NextResponse.json({ status: "paid" });
   }
@@ -68,6 +82,7 @@ export async function POST(request: Request) {
         .from("orders")
         .update({ status: "failed" })
         .eq("id", order.id);
+      await notifySubscriptionPaymentFailed(supabase, user.id, user.email);
     }
     return NextResponse.json({ status: "failed" });
   }

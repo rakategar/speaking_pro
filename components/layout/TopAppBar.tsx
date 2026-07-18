@@ -1,16 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Logo } from "@/components/ui/Logo";
+import { NotificationBell } from "@/components/layout/NotificationBell";
+import { useGoBack } from "@/components/ui/useGoBack";
 import { cn } from "@/lib/utils";
 
 type TopAppBarProps = {
   variant: "home" | "back" | "transactional";
   title: string;
   avatarUrl?: string;
-  onNotificationClick?: () => void;
   className?: string;
   /** Disable the back button (e.g. while an upload is in flight). */
   backDisabled?: boolean;
@@ -35,7 +35,6 @@ export function TopAppBar({
   variant,
   title,
   avatarUrl,
-  onNotificationClick,
   className,
   backDisabled = false,
   showBack = true,
@@ -43,16 +42,7 @@ export function TopAppBar({
   avatarHref,
   avatarFallback,
 }: TopAppBarProps) {
-  const router = useRouter();
-
-  // router.back() is a no-op when the page is the first history entry
-  // (opened from a PWA launch, push notification, or a direct link) --
-  // fall back to the dashboard so the button always does something.
-  function goBack() {
-    if (backDisabled) return;
-    if (window.history.length > 1) router.back();
-    else router.push("/dashboard");
-  }
+  const { goBack, navigating } = useGoBack(backDisabled);
 
   return (
     <header
@@ -107,10 +97,18 @@ export function TopAppBar({
             type="button"
             onClick={goBack}
             disabled={backDisabled}
+            aria-busy={navigating}
             className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors active:scale-95 text-primary -ml-2 disabled:opacity-40 disabled:pointer-events-none"
             aria-label="Kembali"
           >
-            <span className="material-symbols-outlined">arrow_back</span>
+            <span
+              className={cn(
+                "material-symbols-outlined transition-opacity",
+                navigating && "opacity-60",
+              )}
+            >
+              arrow_back
+            </span>
           </button>
         ) : (
           <div className="w-10" />
@@ -131,19 +129,7 @@ export function TopAppBar({
         {variant === "transactional" ? (
           <div className="w-10" />
         ) : (
-          <button
-            type="button"
-            onClick={onNotificationClick}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors active:scale-95 text-primary"
-            aria-label="Notifikasi"
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ fontVariationSettings: "'FILL' 0" }}
-            >
-              notifications
-            </span>
-          </button>
+          <NotificationBell />
         )}
       </div>
     </header>

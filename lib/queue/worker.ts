@@ -9,9 +9,11 @@
 
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { runAnalysis, isPermanentAnalysisError } from "@/lib/analysis/pipeline";
-import { sendPushToUser } from "@/lib/push/send";
+import { notifyUser } from "@/lib/notifications/notify";
 import { generateWeeklySummaries } from "@/lib/queue/weeklySummary";
 import { generateMonthlyCertificates } from "@/lib/queue/monthlyCertificate";
+import { sendSubscriptionRenewalReminders } from "@/lib/queue/subscriptionReminders";
+import { sendTrialExpiringReminders } from "@/lib/queue/trialReminders";
 
 const POLL_MS = 3_000;
 const STALE_PROCESSING_MIN = 20; // reclaim jobs orphaned by a server restart
@@ -52,11 +54,12 @@ async function sendDailyReminders() {
   let sent = 0;
   for (const userId of userIds) {
     if (practicedSet.has(userId)) continue;
-    await sendPushToUser(userId, {
+    await notifyUser(supabase, userId, {
+      type: "reminder",
       title: "Waktunya latihan 💪",
       body: "Anda belum latihan hari ini. 10 menit drill menjaga streak Anda tetap hidup!",
       url: "/dashboard",
-      icon: "/stickers/faisal/waving-mic.png",
+      icon: "/stickers/faisal-v2/waving-mic.png",
     });
     sent += 1;
   }
@@ -129,11 +132,12 @@ async function processOne(): Promise<boolean> {
     const score = report?.overall_score ?? 0;
     const scoreSticker =
       score >= 85 ? "celebrating" : score >= 65 ? "thumbs-up" : "tip-mic";
-    await sendPushToUser(job.user_id, {
+    await notifyUser(supabase, job.user_id, {
+      type: "analysis",
       title: "Analisis selesai 🎉",
       body: "Rapor latihan bicara Anda sudah siap. Ketuk untuk melihat hasilnya.",
       url: `/report/${job.recording_id}`,
-      icon: `/stickers/faisal/${scoreSticker}.png`,
+      icon: `/stickers/faisal-v2/${scoreSticker}.png`,
     });
   } catch (error) {
     const message =
@@ -185,6 +189,8 @@ export function startWorker() {
           await sendDailyReminders();
           await generateWeeklySummaries();
           await generateMonthlyCertificates();
+          await sendSubscriptionRenewalReminders();
+          await sendTrialExpiringReminders();
         }
         // Drain everything that is ready, then sleep.
         while (await processOne()) {

@@ -59,14 +59,32 @@ function RecordingStudio() {
   const moduleSlug = searchParams.get("module") ?? "free-recording";
 
   const [maxSeconds, setMaxSeconds] = useState(5 * 60);
-  useEffect(() => {
+  // Premium's remaining weekly quota (weekly remainder + purchased seconds).
+  // null = not premium or not loaded yet, so nothing is gated on it.
+  const [quotaRemaining, setQuotaRemaining] = useState<number | null>(null);
+
+  const loadQuota = useCallback(() => {
     fetch("/api/trial/status")
       .then((res) => (res.ok ? res.json() : null))
       .then((info) => {
-        if (info?.tier === "free") setMaxSeconds(info.maxRecordingSeconds ?? 30);
+        if (info?.tier === "free") {
+          setMaxSeconds(info.maxRecordingSeconds ?? 30);
+          return;
+        }
+        if (info?.tier === "premium") {
+          const remaining = Number(info.totalRemainingSeconds ?? 0);
+          setQuotaRemaining(remaining);
+          // Auto-stop exactly on the budget rather than letting the user
+          // record time the upload would then reject.
+          setMaxSeconds(Math.max(0, Math.min(5 * 60, remaining)));
+        }
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    loadQuota();
+  }, [loadQuota]);
 
   const recorder = useRecorder({ maxSeconds });
   const [envSlug, setEnvSlug] = useState(ENVIRONMENTS[0].slug);
@@ -177,7 +195,16 @@ function RecordingStudio() {
         body: form,
       });
       const uploadJson = await uploadRes.json();
+      // 402 = quota spent. Refresh so the studio flips to the top-up overlay
+      // instead of leaving the user staring at a bare error.
+      if (uploadRes.status === 402) {
+        setQuotaRemaining(Number(uploadJson.weeklyRemainingSeconds ?? 0));
+        loadQuota();
+        throw new Error(uploadJson.error ?? "Kuota rekaman habis");
+      }
       if (!uploadRes.ok) throw new Error(uploadJson.error ?? "Upload gagal");
+      // Quota just moved -- keep the cap and indicator honest for the next take.
+      loadQuota();
 
       const analyzeRes = await fetch(
         `/api/recordings/${uploadJson.id}/analyze`,
@@ -196,7 +223,7 @@ function RecordingStudio() {
       setErrorMsg(e instanceof Error ? e.message : "Terjadi kesalahan.");
       setPhase("failed");
     }
-  }, [reviewBlob, reviewSeconds, reviewUrl, envSlug, moduleSlug]);
+  }, [reviewBlob, reviewSeconds, reviewUrl, envSlug, moduleSlug, loadQuota]);
 
   // Hard cap: the recorder pauses itself at maxSeconds; stop automatically
   // (into review, same as a manual stop) so the user can't keep going.
@@ -619,6 +646,48 @@ function RecordingStudio() {
           </div>
         </div>
       )}
+
+      {/* Blocked: weekly recording quota spent (Premium). Below MIN_SECONDS
+          there isn't enough left to make an analysable recording, so send the
+          user to top up rather than let them record something we'd reject. */}
+      {phase === "studio" &&
+        !pendingQueue?.active &&
+        quotaRemaining !== null &&
+        quotaRemaining < MIN_SECONDS && (
+          <div className="fixed inset-0 z-40 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
+            <div className="pop-in">
+              <FaisalAvatar expression="doubtful" size={96} priority />
+            </div>
+            <div>
+              <p className="text-white font-heading text-title-lg font-bold">
+                Kuota Rekaman Minggu Ini Habis
+              </p>
+              <p className="text-white/70 text-sm mt-2 max-w-sm">
+                Jatah rekaman Anda{" "}
+                <span className="font-bold text-light-aqua">5 menit/minggu</span>{" "}
+                sudah terpakai. Tambah kuota 5 menit seharga Rp25.000 untuk
+                lanjut merekam sekarang — atau tunggu kuota direset Senin depan.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 w-full max-w-xs">
+              <Link
+                href="/profile"
+                className="h-12 rounded-full bg-white text-primary-container font-semibold flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[20px]">
+                  add_circle
+                </span>
+                Tambah Kuota
+              </Link>
+              <Link
+                href="/dashboard"
+                className="h-12 rounded-full border border-white/30 text-white font-semibold flex items-center justify-center"
+              >
+                Kembali ke Dashboard
+              </Link>
+            </div>
+          </div>
+        )}
 
       {/* Failed actions */}
       {phase === "failed" && (

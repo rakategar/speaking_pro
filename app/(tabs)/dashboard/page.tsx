@@ -11,6 +11,7 @@ import {
 import { trialDayIndex } from "@/lib/trial/status";
 import { trialModulePlan } from "@/lib/drills/trialPlan";
 import { TrialNudgeGate } from "@/components/trial/TrialNudgeGate";
+import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
 import { FaisalAvatar } from "@/components/ui/FaisalAvatar";
 import { TopAppBar } from "@/components/layout/TopAppBar";
 
@@ -64,7 +65,7 @@ export default async function DashboardPage() {
     supabase
       .from("profiles")
       .select(
-        "full_name, avatar_url, streak_count, subscription_tier, trial_started_at, trial_nudges_seen",
+        "full_name, avatar_url, streak_count, subscription_tier, trial_started_at, trial_nudges_seen, tutorial_completed",
       )
       .eq("id", user.id)
       .maybeSingle(),
@@ -186,6 +187,10 @@ export default async function DashboardPage() {
 
   return (
     <div className="w-full max-w-md mx-auto relative">
+      {profile && !profile.tutorial_completed && (
+        <TutorialOverlay userId={user.id} />
+      )}
+
       {isFreeTrial && trialDay !== null && (
         <TrialNudgeGate
           userId={user.id}
@@ -260,7 +265,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Today's drills */}
-          <div className="flex flex-col gap-2">
+          <div data-tutorial="daily-plan" className="flex flex-col gap-2">
             {planWithTitles.map((p, i) => (
               <Link
                 key={p.slug}
@@ -367,6 +372,7 @@ export default async function DashboardPage() {
 
           <Link
             href="/record"
+            data-tutorial="weekly-record"
             className="bg-transparent border border-light-aqua/60 text-light-aqua rounded-2xl py-3 flex items-center justify-center gap-2 hover:bg-light-aqua/10 active:scale-95 transition-all z-10"
           >
             <span className="material-symbols-outlined text-[20px]">mic</span>
@@ -379,6 +385,7 @@ export default async function DashboardPage() {
         {/* Progress Snap */}
         <Link
           href={latestAnalyzed ? `/report/${latestAnalyzed.id}` : "/record"}
+          data-tutorial="progress-snap"
           className="bg-surface-container-lowest border border-stroke-subtle bento-card rounded-3xl p-6 flex items-center justify-between py-8 active:scale-[0.99] transition-transform"
         >
           <div className="flex flex-col gap-0.5">

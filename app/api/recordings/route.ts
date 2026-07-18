@@ -82,6 +82,55 @@ export async function POST(request: Request) {
     );
   }
 
+  // Premium spends a weekly duration budget (5 min) before dipping into any
+  // purchased top-up seconds. The debit is atomic in Postgres so two uploads
+  // racing each other can't both pass the check. `debited` is how many
+  // purchased seconds were actually taken, so a failed upload can refund
+  // exactly that much below. Free/trial keep the old per-recording cap only.
+  let debitedTopupSeconds = 0;
+  if (trialStatus.tier === "premium") {
+    const { data: quota, error: quotaError } = await supabase
+      .rpc("consume_recording_quota", {
+        p_user_id: user.id,
+        p_seconds: Math.round(durationSeconds),
+      })
+      .single();
+
+    if (quotaError) {
+      return NextResponse.json(
+        { error: "Gagal memeriksa kuota rekaman. Coba lagi." },
+        { status: 500 },
+      );
+    }
+    if (!quota?.allowed) {
+      const remaining = quota?.weekly_remaining ?? 0;
+      return NextResponse.json(
+        {
+          error:
+            remaining > 0
+              ? `Sisa kuota rekaman minggu ini hanya ${remaining} detik. Tambah kuota 5 menit (Rp25.000) untuk melanjutkan.`
+              : "Kuota rekaman mingguan Anda sudah habis. Tambah kuota 5 menit (Rp25.000) untuk melanjutkan.",
+          reason: "quota_exhausted",
+          weeklyRemainingSeconds: remaining,
+          topupSecondsBalance: quota?.topup_balance ?? 0,
+        },
+        { status: 402 },
+      );
+    }
+    debitedTopupSeconds = quota.debited ?? 0;
+  }
+
+  // Hands back any purchased seconds spent above, for paths that abort after
+  // the debit. Weekly usage needs no undo -- it's derived from the recordings
+  // row, which those paths delete.
+  async function refundTopup() {
+    if (debitedTopupSeconds <= 0) return;
+    await createServiceRoleClient().rpc("add_topup_seconds", {
+      p_user_id: user!.id,
+      p_seconds: debitedTopupSeconds,
+    });
+  }
+
   let moduleId: string | null = null;
   if (typeof moduleSlug === "string" && moduleSlug) {
     const { data: module } = await supabase
@@ -104,6 +153,7 @@ export async function POST(request: Request) {
     .select("id")
     .single();
   if (insertError || !recording) {
+    await refundTopup();
     return NextResponse.json(
       { error: insertError?.message ?? "Gagal membuat rekaman" },
       { status: 500 },
@@ -120,6 +170,7 @@ export async function POST(request: Request) {
     });
   if (uploadError) {
     await supabase.from("recordings").delete().eq("id", recording.id);
+    await refundTopup();
     return NextResponse.json(
       { error: `Upload gagal: ${uploadError.message}` },
       { status: 500 },

@@ -3,10 +3,6 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  PaymentMethodRadio,
-  type PaymentMethod,
-} from "@/components/ui/PaymentMethodRadio";
 import { loadSnapJs } from "@/lib/payments/snap";
 import { formatRupiah } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -21,22 +17,14 @@ type Product = {
   coachName: string | null;
 };
 
-const TIME_SLOTS = [
-  { time: "09:00", taken: false },
-  { time: "10:00", taken: false },
-  { time: "11:00", taken: true },
-  { time: "14:00", taken: false },
-  { time: "15:00", taken: false },
-  { time: "16:00", taken: true },
-];
-
 const TYPE_BADGE: Record<string, string> = {
-  ebook: "E-Book",
-  video_course: "Video Course",
+  ebook: "Buku Fisik",
+  video_course: "E-Course",
   "1on1": "Exclusive Service",
   subscription: "Subscription",
 };
 
+// Upcoming weekdays offered as preferred-date options for a 1-on-1 booking.
 function nextWeekdays(count: number): Date[] {
   const days: Date[] = [];
   const d = new Date();
@@ -48,31 +36,62 @@ function nextWeekdays(count: number): Date[] {
   return days;
 }
 
-export function CheckoutForm({ product }: { product: Product }) {
+export function CheckoutForm({
+  product,
+  defaultName = "",
+  defaultEmail = "",
+}: {
+  product: Product;
+  defaultName?: string;
+  defaultEmail?: string;
+}) {
   const router = useRouter();
   const needsSchedule = product.type === "1on1";
-  // Subscriptions run through the real Midtrans Snap gateway; other product
-  // types still use the mock gateway (see /api/checkout/mock-pay).
+  const needsShipping = product.type === "ebook";
   const isSubscription = product.type === "subscription";
+  // ebook + 1on1 go through real Midtrans Snap via /api/payments/checkout.
+  const isSale = product.type === "ebook" || product.type === "1on1";
 
-  const days = useMemo(() => nextWeekdays(5), []);
-  const [dayIndex, setDayIndex] = useState(0);
-  const [slot, setSlot] = useState<string | null>(null);
-  const [method, setMethod] = useState<PaymentMethod>("qris");
+  // Contact (buyer) — Pro Shop purchases only.
+  const [name, setName] = useState(defaultName);
+  const [email, setEmail] = useState(defaultEmail);
+  const [whatsapp, setWhatsapp] = useState("");
+
+  // 1-on-1 booking details.
+  const dateOptions = useMemo(() => nextWeekdays(14), []);
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [domicile, setDomicile] = useState("");
+  const [topic, setTopic] = useState("");
+
+  // Buku Speakingpro shipping address.
+  const [shippingAddress, setShippingAddress] = useState("");
+  const [shippingCity, setShippingCity] = useState("");
+  const [shippingPostalCode, setShippingPostalCode] = useState("");
+
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paid, setPaid] = useState<{ orderId: string } | null>(null);
 
-  const monthLabel = days[dayIndex].toLocaleDateString("id-ID", {
-    month: "long",
-    year: "numeric",
-  });
+  function toggleDate(iso: string) {
+    setSelectedDates((prev) =>
+      prev.includes(iso) ? prev.filter((d) => d !== iso) : [...prev, iso],
+    );
+  }
 
-  const scheduleComplete = !needsSchedule || slot !== null;
+  const contactComplete =
+    !isSale || (name.trim() !== "" && email.trim() !== "" && whatsapp.trim() !== "");
+  const scheduleComplete =
+    !needsSchedule ||
+    (selectedDates.length >= 2 && domicile.trim() !== "" && topic.trim() !== "");
+  const shippingComplete =
+    !needsShipping ||
+    (shippingAddress.trim() !== "" &&
+      shippingCity.trim() !== "" &&
+      shippingPostalCode.trim() !== "");
+  const canPay =
+    isSubscription || (contactComplete && scheduleComplete && shippingComplete);
 
-  // Re-check a Snap order server-side and flip the UI to "paid" once Midtrans
-  // confirms settlement. Also runs on the Snap popup closing, in case the
-  // user paid via QRIS/VA and the webhook hasn't landed yet.
+  // --- Subscription (unchanged real-Midtrans flow) ---
   async function confirmSubscription(orderId: string) {
     try {
       const res = await fetch("/api/payments/subscription/status", {
@@ -81,19 +100,16 @@ export function CheckoutForm({ product }: { product: Product }) {
         body: JSON.stringify({ orderId }),
       });
       const json = await res.json();
-      if (json.status === "paid") {
-        setPaid({ orderId });
-      } else if (json.status === "failed") {
+      if (json.status === "paid") setPaid({ orderId });
+      else if (json.status === "failed")
         setError("Pembayaran dibatalkan atau gagal. Silakan coba lagi.");
-      } else {
+      else
         setError(
           "Pembayaran sedang diproses. Status Premium akan aktif otomatis begitu pembayaran dikonfirmasi.",
         );
-      }
     } catch {
-      // The webhook still reconciles the order server-side.
       setError(
-        "Tidak bisa memastikan status pembayaran. Jika sudah membayar, status Premium akan aktif otomatis.",
+        "Tidak bisa memastikan status pembayaran. Jika sudah membayar, status akan diperbarui otomatis.",
       );
     } finally {
       setPaying(false);
@@ -103,11 +119,8 @@ export function CheckoutForm({ product }: { product: Product }) {
   async function paySubscription() {
     const res = await fetch("/api/payments/subscription", { method: "POST" });
     const json = await res.json();
-    if (!res.ok) {
-      throw new Error(
-        json.error ?? `Gagal memulai pembayaran (HTTP ${res.status})`,
-      );
-    }
+    if (!res.ok)
+      throw new Error(json.error ?? `Gagal memulai pembayaran (HTTP ${res.status})`);
     await loadSnapJs(json.snapJsUrl, json.clientKey);
     window.snap!.pay(json.token, {
       onSuccess: () => void confirmSubscription(json.orderId),
@@ -120,36 +133,76 @@ export function CheckoutForm({ product }: { product: Product }) {
     });
   }
 
+  // --- Pro Shop sale (ebook / 1on1) ---
+  async function confirmSale(orderId: string) {
+    try {
+      const res = await fetch("/api/payments/checkout/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
+      const json = await res.json();
+      if (json.status === "paid") setPaid({ orderId });
+      else if (json.status === "failed")
+        setError("Pembayaran dibatalkan atau gagal. Silakan coba lagi.");
+      else
+        setError(
+          "Pembayaran sedang diproses. Konfirmasi akan dikirim otomatis begitu pembayaran diterima.",
+        );
+    } catch {
+      setError(
+        "Tidak bisa memastikan status pembayaran. Jika sudah membayar, konfirmasi akan dikirim otomatis.",
+      );
+    } finally {
+      setPaying(false);
+    }
+  }
+
+  async function paySale() {
+    const res = await fetch("/api/payments/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        productId: product.id,
+        customer: { name, email, whatsapp },
+        booking: needsSchedule
+          ? { preferredDates: selectedDates, domicile, topic }
+          : undefined,
+        shipping: needsShipping
+          ? {
+              address: shippingAddress,
+              city: shippingCity,
+              postalCode: shippingPostalCode,
+            }
+          : undefined,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok)
+      throw new Error(json.error ?? `Gagal memulai pembayaran (HTTP ${res.status})`);
+    await loadSnapJs(json.snapJsUrl, json.clientKey);
+    window.snap!.pay(json.token, {
+      onSuccess: () => void confirmSale(json.orderId),
+      onPending: () => void confirmSale(json.orderId),
+      onError: () => {
+        setError("Pembayaran gagal. Silakan coba lagi.");
+        setPaying(false);
+      },
+      onClose: () => void confirmSale(json.orderId),
+    });
+  }
+
   async function pay() {
-    if (paying || !scheduleComplete) return;
+    if (paying || !canPay) return;
     setError(null);
     setPaying(true);
     try {
       if (isSubscription) {
-        // Snap opens a modal; `paying` stays true until a callback resolves it.
         await paySubscription();
-        return;
+      } else {
+        await paySale();
       }
-      let scheduledAt: string | undefined;
-      if (needsSchedule && slot) {
-        const [h, m] = slot.split(":").map(Number);
-        const dt = new Date(days[dayIndex]);
-        dt.setHours(h, m, 0, 0);
-        scheduledAt = dt.toISOString();
-      }
-      const res = await fetch("/api/checkout/mock-pay", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId: product.id,
-          paymentMethod: method,
-          scheduledAt,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Pembayaran gagal");
-      setPaid({ orderId: json.orderId });
-      setPaying(false);
+      // Snap opens a modal; `paying` stays true until a callback resolves it.
     } catch (e) {
       setError(e instanceof Error ? e.message : "Terjadi kesalahan.");
       setPaying(false);
@@ -172,9 +225,11 @@ export function CheckoutForm({ product }: { product: Product }) {
             Pembayaran Berhasil!
           </h2>
           <p className="text-body-md text-text-secondary mt-2 max-w-xs">
-            {needsSchedule && slot
-              ? `Sesi "${product.title}" Anda terjadwal ${days[dayIndex].toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" })} pukul ${slot} WIB.`
-              : `"${product.title}" sudah aktif di akun Anda.`}
+            {needsSchedule
+              ? "Terima kasih! Tim kami akan menghubungi Anda via WhatsApp untuk konfirmasi jadwal dari tanggal pilihan Anda."
+              : product.type === "ebook"
+                ? "Buku Speakingpro akan segera dikirim ke alamat Anda. Konfirmasi & nomor resi akan dikirim via email dan WhatsApp."
+                : `"${product.title}" sudah aktif di akun Anda.`}
           </p>
           <p className="text-label-sm text-text-secondary mt-2">
             Order ID: {paid.orderId.slice(0, 8).toUpperCase()}
@@ -189,21 +244,21 @@ export function CheckoutForm({ product }: { product: Product }) {
             Kembali ke Dashboard
           </button>
           <Link
-            href="/profile"
+            href="/pro-shop"
             className="w-full border border-outline-variant text-on-surface rounded-full py-3.5 font-semibold active:scale-95 transition text-center"
           >
-            Lihat Pembelian Saya
+            Kembali ke Pro Shop
           </Link>
         </div>
       </div>
     );
   }
 
+  const inputClass =
+    "w-full rounded-xl border border-stroke-subtle bg-surface-card px-4 py-3 text-body-md text-on-surface placeholder:text-text-secondary focus:outline-none focus:border-secondary-container transition-colors";
+
   return (
     <div className="min-h-screen bg-background pb-32">
-      {/* Transactional top bar -- shared TopAppBar so back navigation always
-          has the history-length fallback (deep links / PWA launches into
-          checkout used to leave a dead back button here). */}
       <TopAppBar variant="transactional" title="Checkout" />
 
       <main className="pt-32 px-margin-mobile max-w-lg mx-auto flex flex-col gap-bento-gap">
@@ -243,128 +298,224 @@ export function CheckoutForm({ product }: { product: Product }) {
           </div>
         </section>
 
-        {/* Scheduling (1-on-1 only) */}
-        {needsSchedule && (
+        {/* Contact (Pro Shop purchases) */}
+        {isSale && (
           <section className="bento-card p-6 flex flex-col gap-4">
             <h3 className="font-title-lg text-title-lg text-on-background">
-              Pilih Jadwal Konsultasi
+              Data Kontak
             </h3>
             <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="font-label-md text-label-md text-on-background capitalize">
-                  {monthLabel}
-                </span>
+              <div className="flex flex-col gap-1">
+                <label className="font-label-sm text-label-sm text-text-secondary">
+                  Nama Lengkap
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Nama Anda"
+                  className={inputClass}
+                />
               </div>
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 hide-scrollbar">
-                {days.map((d, i) => {
-                  const selected = i === dayIndex;
-                  return (
-                    <button
-                      key={d.toISOString()}
-                      type="button"
-                      onClick={() => setDayIndex(i)}
-                      className={cn(
-                        "flex flex-col items-center justify-center min-w-[64px] h-20 rounded-xl transition-colors",
-                        selected
-                          ? "border-2 border-tertiary-fixed-dim bg-tertiary-fixed-dim/10"
-                          : "border border-stroke-subtle hover:bg-surface-variant",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "font-label-sm text-label-sm",
-                          selected
-                            ? "text-on-tertiary-container"
-                            : "text-text-secondary",
-                        )}
-                      >
-                        {d.toLocaleDateString("id-ID", { weekday: "short" })}
-                      </span>
-                      <span
-                        className={cn(
-                          "font-title-lg text-title-lg",
-                          selected
-                            ? "text-on-tertiary-container"
-                            : "text-on-background",
-                        )}
-                      >
-                        {d.getDate()}
-                      </span>
-                    </button>
-                  );
-                })}
+              <div className="flex flex-col gap-1">
+                <label className="font-label-sm text-label-sm text-text-secondary">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="email@contoh.com"
+                  className={inputClass}
+                />
+                {product.type === "ebook" && (
+                  <p className="font-label-sm text-label-sm text-text-secondary mt-1">
+                    Konfirmasi pesanan akan dikirim ke email ini.
+                  </p>
+                )}
               </div>
-            </div>
-            <div className="flex flex-col gap-3">
-              <span className="font-label-md text-label-md text-on-background">
-                Waktu Tersedia (WIB)
-              </span>
-              <div className="grid grid-cols-3 gap-3">
-                {TIME_SLOTS.map((s) => (
-                  <button
-                    key={s.time}
-                    type="button"
-                    disabled={s.taken}
-                    onClick={() => setSlot(s.time)}
-                    className={cn(
-                      "py-3 rounded-xl font-label-md text-label-md transition-colors",
-                      s.taken
-                        ? "border border-stroke-subtle opacity-40 cursor-not-allowed bg-surface-container text-text-secondary"
-                        : slot === s.time
-                          ? "border-2 border-tertiary-fixed-dim bg-tertiary-fixed-dim/10 text-on-tertiary-container"
-                          : "border border-stroke-subtle hover:bg-surface-variant text-on-background",
-                    )}
-                  >
-                    {s.time}
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-4 mt-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full border border-stroke-subtle" />
-                  <span className="font-label-sm text-label-sm text-text-secondary">
-                    Tersedia
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-surface-container opacity-40" />
-                  <span className="font-label-sm text-label-sm text-text-secondary">
-                    Terisi
-                  </span>
-                </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-label-sm text-label-sm text-text-secondary">
+                  Nomor WhatsApp
+                </label>
+                <input
+                  type="tel"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  placeholder="08xxxxxxxxxx"
+                  className={inputClass}
+                />
               </div>
             </div>
           </section>
         )}
 
-        {/* Payment method */}
+        {/* Shipping address (Buku Speakingpro only) */}
+        {needsShipping && (
+          <section className="bento-card p-6 flex flex-col gap-4">
+            <div>
+              <h3 className="font-title-lg text-title-lg text-on-background">
+                Alamat Pengiriman
+              </h3>
+              <p className="font-body-sm text-body-sm text-text-secondary mt-1">
+                Buku Speakingpro adalah buku fisik yang akan dikirim ke alamat
+                ini.
+              </p>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="font-label-sm text-label-sm text-text-secondary">
+                Alamat Lengkap
+              </label>
+              <textarea
+                value={shippingAddress}
+                onChange={(e) => setShippingAddress(e.target.value)}
+                rows={3}
+                placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan, kecamatan"
+                className={cn(inputClass, "resize-none")}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="font-label-sm text-label-sm text-text-secondary">
+                  Kota
+                </label>
+                <input
+                  type="text"
+                  value={shippingCity}
+                  onChange={(e) => setShippingCity(e.target.value)}
+                  placeholder="mis. Jakarta"
+                  className={inputClass}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-label-sm text-label-sm text-text-secondary">
+                  Kode Pos
+                </label>
+                <input
+                  type="text"
+                  value={shippingPostalCode}
+                  onChange={(e) => setShippingPostalCode(e.target.value)}
+                  placeholder="mis. 40123"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Scheduling (1-on-1 only) */}
+        {needsSchedule && (
+          <section className="bento-card p-6 flex flex-col gap-4">
+            <div>
+              <h3 className="font-title-lg text-title-lg text-on-background">
+                Pilih Tanggal Konsultasi
+              </h3>
+              <p className="font-body-sm text-body-sm text-text-secondary mt-1">
+                Pilih minimal 2 tanggal yang cocok. Tim kami akan konfirmasi
+                slot final via WhatsApp.
+              </p>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {dateOptions.map((d) => {
+                const iso = d.toISOString();
+                const selected = selectedDates.includes(iso);
+                return (
+                  <button
+                    key={iso}
+                    type="button"
+                    onClick={() => toggleDate(iso)}
+                    className={cn(
+                      "flex flex-col items-center justify-center h-16 rounded-xl transition-colors",
+                      selected
+                        ? "border-2 border-tertiary-fixed-dim bg-tertiary-fixed-dim/10"
+                        : "border border-stroke-subtle hover:bg-surface-variant",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "font-label-sm text-label-sm",
+                        selected
+                          ? "text-on-tertiary-container"
+                          : "text-text-secondary",
+                      )}
+                    >
+                      {d.toLocaleDateString("id-ID", { weekday: "short" })}
+                    </span>
+                    <span
+                      className={cn(
+                        "font-title-md text-title-md",
+                        selected
+                          ? "text-on-tertiary-container"
+                          : "text-on-background",
+                      )}
+                    >
+                      {d.getDate()}
+                    </span>
+                    <span
+                      className={cn(
+                        "font-label-sm text-[10px]",
+                        selected
+                          ? "text-on-tertiary-container"
+                          : "text-text-secondary",
+                      )}
+                    >
+                      {d.toLocaleDateString("id-ID", { month: "short" })}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="font-label-sm text-label-sm text-text-secondary">
+              {selectedDates.length} tanggal dipilih
+            </p>
+
+            <div className="flex flex-col gap-1">
+              <label className="font-label-sm text-label-sm text-text-secondary">
+                Domisili (Kota)
+              </label>
+              <input
+                type="text"
+                value={domicile}
+                onChange={(e) => setDomicile(e.target.value)}
+                placeholder="mis. Jakarta"
+                className={inputClass}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="font-label-sm text-label-sm text-text-secondary">
+                Topik yang ingin dibahas
+              </label>
+              <textarea
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                rows={3}
+                placeholder="Ceritakan singkat apa yang ingin Anda konsultasikan..."
+                className={cn(inputClass, "resize-none")}
+              />
+            </div>
+          </section>
+        )}
+
+        {/* Payment method — always via Midtrans for in-app checkout */}
         <section className="flex flex-col gap-3">
           <h3 className="font-title-lg text-title-lg text-on-background px-1">
             Metode Pembayaran
           </h3>
-          {isSubscription ? (
-            <div className="bento-card p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-secondary-container/10 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[22px] text-secondary-container">
-                  account_balance_wallet
-                </span>
-              </div>
-              <p className="font-body-md text-body-md text-text-secondary">
-                Pilih metode pembayaran (QRIS, Virtual Account, e-wallet, kartu)
-                di jendela pembayaran aman Midtrans setelah menekan{" "}
-                <span className="font-semibold text-on-background">
-                  Bayar Sekarang
-                </span>
-                .
-              </p>
+          <div className="bento-card p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-secondary-container/10 flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[22px] text-secondary-container">
+                account_balance_wallet
+              </span>
             </div>
-          ) : (
-            <PaymentMethodRadio
-              value={method}
-              onChange={setMethod}
-              disabled={paying}
-            />
-          )}
+            <p className="font-body-md text-body-md text-text-secondary">
+              Pilih metode pembayaran (QRIS, Virtual Account, e-wallet, kartu) di
+              jendela pembayaran aman Midtrans setelah menekan{" "}
+              <span className="font-semibold text-on-background">
+                Bayar Sekarang
+              </span>
+              .
+            </p>
+          </div>
         </section>
 
         {/* Summary */}
@@ -406,7 +557,7 @@ export function CheckoutForm({ product }: { product: Product }) {
           <button
             type="button"
             onClick={pay}
-            disabled={paying || !scheduleComplete}
+            disabled={paying || !canPay}
             className="w-full bg-primary-container text-on-primary h-14 rounded-full font-label-md text-label-md flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-[20px]">
@@ -414,9 +565,13 @@ export function CheckoutForm({ product }: { product: Product }) {
             </span>
             {paying
               ? "Memproses Pembayaran..."
-              : !scheduleComplete
-                ? "Pilih Jadwal Dulu"
-                : "Bayar Sekarang"}
+              : !contactComplete
+                ? "Lengkapi Data Kontak"
+                : !shippingComplete
+                  ? "Lengkapi Alamat Pengiriman"
+                  : !scheduleComplete
+                    ? "Pilih Min. 2 Tanggal & Isi Detail"
+                    : "Bayar Sekarang"}
           </button>
         </div>
       </div>
