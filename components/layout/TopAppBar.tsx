@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Logo } from "@/components/ui/Logo";
+import { LogoHorizontal } from "@/components/ui/LogoHorizontal";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { useGoBack } from "@/components/ui/useGoBack";
@@ -53,7 +53,7 @@ export function TopAppBar({
     >
       {/* Brand strip: same logo, same size/position, on every page. */}
       <div className="flex items-center justify-center py-1.5 border-b border-stroke-subtle/30">
-        <Logo className="h-5 w-auto" />
+        <LogoHorizontal className="h-6 w-auto" />
       </div>
 
       <div className="flex items-center justify-between px-margin-mobile py-4">
