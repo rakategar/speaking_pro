@@ -12,6 +12,7 @@ import { EnablePush } from "@/components/push/EnablePush";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FaisalAvatar } from "@/components/ui/FaisalAvatar";
 import { TopAppBar } from "@/components/layout/TopAppBar";
+import { BottomNavBar } from "@/components/layout/BottomNavBar";
 import { cn } from "@/lib/utils";
 
 type Phase = "studio" | "review" | "uploading" | "queued" | "failed";
@@ -248,7 +249,7 @@ function RecordingStudio() {
   }, [isLive, phase, recorder.seconds, recorder.maxSeconds, handleStop]);
 
   return (
-    <main className="flex-1 flex flex-col items-center px-margin-mobile pt-32 pb-24 relative w-full max-w-lg mx-auto">
+    <main className="flex-1 flex flex-col items-center px-margin-mobile pt-32 pb-32 relative w-full max-w-lg mx-auto">
       {/* Shared navbar, consistent with the other recording views; back is
           blocked while an upload/queue is in flight. */}
       <TopAppBar
@@ -493,7 +494,7 @@ function RecordingStudio() {
       {/* Review overlay: listen back, re-record, or continue to analysis --
           applies to every tier, not just the free trial. */}
       {phase === "review" && reviewUrl && (
-        <div className="fixed inset-0 z-50 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
+        <div className="fixed inset-0 z-[60] bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
           <div className="pop-in">
             <FaisalAvatar expression="thinking-idea" size={96} priority />
           </div>
@@ -554,7 +555,7 @@ function RecordingStudio() {
 
       {/* Uploading overlay */}
       {phase === "uploading" && (
-        <div className="fixed inset-0 z-50 bg-primary-container/90 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-10 text-center overlay-in">
+        <div className="fixed inset-0 z-[60] bg-primary-container/90 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-10 text-center overlay-in">
           <div className="text-light-aqua">
             <Soundwave />
           </div>
@@ -571,7 +572,7 @@ function RecordingStudio() {
 
       {/* Queued (submitted) overlay -- no waiting: results come later */}
       {phase === "queued" && (
-        <div className="fixed inset-0 z-50 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
+        <div className="fixed inset-0 z-[60] bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
           <div className="pop-in">
             <FaisalAvatar expression="analyzing" size={96} priority />
           </div>
@@ -611,7 +612,7 @@ function RecordingStudio() {
 
       {/* Blocked: a previous analysis is still in the queue */}
       {phase === "studio" && pendingQueue?.active && (
-        <div className="fixed inset-0 z-40 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
+        <div className="fixed inset-0 z-[60] bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
           <div className="pop-in">
             <FaisalAvatar expression="analyzing" size={96} priority />
           </div>
@@ -653,7 +654,7 @@ function RecordingStudio() {
 
       {/* Blocked: the free tier's single lifetime recording is spent. */}
       {phase === "studio" && !pendingQueue?.active && freeExhausted && (
-        <div className="fixed inset-0 z-40 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
+        <div className="fixed inset-0 z-[60] bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
           <div className="pop-in">
             <FaisalAvatar expression="inviting-mic" size={96} priority />
           </div>
@@ -696,7 +697,7 @@ function RecordingStudio() {
         !pendingQueue?.active &&
         quotaRemaining !== null &&
         quotaRemaining < MIN_SECONDS && (
-          <div className="fixed inset-0 z-40 bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
+          <div className="fixed inset-0 z-[60] bg-primary-container/95 backdrop-blur-md flex flex-col items-center justify-center gap-6 px-8 text-center overlay-in">
             <div className="pop-in">
               <FaisalAvatar expression="doubtful" size={96} priority />
             </div>
@@ -743,6 +744,12 @@ function RecordingStudio() {
           </button>
         </div>
       )}
+
+      {/* /record lives in the (focus) group, which omits the bottom nav by
+          design -- but this screen is a bottom-tab destination, so it mounts
+          the nav itself. The blocking overlays above sit at z-[60] to stay
+          over it (the nav is z-50). */}
+      <BottomNavBar />
     </main>
   );
 }

@@ -13,11 +13,12 @@ const TABS = [
 
 /**
  * Standardized 4-tab glassmorphic floating nav (Home/Library/Record/Profile).
- * Rendered only from (tabs)/layout.tsx -- suppressed on recording, breathing,
- * checkout and pro-shop routes per the original mockups' explicit
+ * Mounted by (tabs)/layout.tsx for every tab route, and by (focus)/record
+ * directly -- /record is a bottom-tab destination that happens to live in the
+ * (focus) group for its page transitions. Every other (focus) route
+ * (breathing, checkout, pro-shop) suppresses the nav per the mockups'
  * "BottomNavBar is intentionally SUPPRESSED" convention for linear/
- * transactional flows, enforced here by the (focus) route group simply
- * never mounting this component.
+ * transactional flows, enforced by simply never mounting this component.
  */
 export function BottomNavBar() {
   const pathname = usePathname();

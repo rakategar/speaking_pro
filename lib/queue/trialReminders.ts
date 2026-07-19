@@ -21,7 +21,7 @@ export async function sendTrialExpiringReminders() {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, full_name, trial_ends_at")
+    .select("id, full_name, trial_ends_at, notif_marketing")
     .eq("subscription_tier", "free")
     .is("trial_reminder_sent_at", null)
     .not("trial_ends_at", "is", null)
@@ -35,7 +35,9 @@ export async function sendTrialExpiringReminders() {
     const { data: authUser } = await supabase.auth.admin.getUserById(
       profile.id,
     );
-    if (authUser.user?.email) {
+    // This is an upgrade pitch, so the "Marketing Emails" setting gates it.
+    // The in-app notification below still fires -- the toggle is about email.
+    if (authUser.user?.email && profile.notif_marketing !== false) {
       const { subject, html } = trialExpiringEmail(profile.full_name, endsAt);
       await sendEmail({ to: authUser.user.email, subject, html });
     }

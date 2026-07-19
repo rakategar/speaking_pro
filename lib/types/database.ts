@@ -421,6 +421,9 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          notif_digest: boolean
+          notif_marketing: boolean
+          notif_push: boolean
           occupation: string | null
           onboarding_answers: Json
           onboarding_completed: boolean
@@ -441,6 +444,9 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          notif_digest?: boolean
+          notif_marketing?: boolean
+          notif_push?: boolean
           occupation?: string | null
           onboarding_answers?: Json
           onboarding_completed?: boolean
@@ -461,6 +467,9 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          notif_digest?: boolean
+          notif_marketing?: boolean
+          notif_push?: boolean
           occupation?: string | null
           onboarding_answers?: Json
           onboarding_completed?: boolean

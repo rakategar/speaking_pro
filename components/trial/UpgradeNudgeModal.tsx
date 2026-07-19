@@ -13,8 +13,9 @@ type Props = {
 // Shared paywall overlay for: locked-module taps (Library/drill routes),
 // blurred report sections, and the day-3/5/7 trial upgrade nudges. Follows
 // the same overlay pattern as ChangePasswordModal (components/settings/
-// SettingsView.tsx) / the analyst Modal (app/analyst/page.tsx). Copy is
-// placeholder -- marketing copy from the product doc gets swapped in later.
+// SettingsView.tsx) / the analyst Modal (app/analyst/page.tsx). Callers that
+// pass no title/body fall back to generic paywall copy; the trial day-3/5/7
+// nudges pass their own (components/trial/TrialNudgeGate.tsx).
 export function UpgradeNudgeModal({ variant = "soft", title, body, onClose }: Props) {
   const router = useRouter();
 
@@ -36,7 +37,10 @@ export function UpgradeNudgeModal({ variant = "soft", title, body, onClose }: Pr
             {title ?? (variant === "hard" ? "Trial 7 Hari Kamu Segera Berakhir" : "Upgrade untuk Hasil Lengkap")}
           </h3>
           <p className="text-body-md text-text-secondary">
-            {body ?? "[Upgrade nudge copy]"}
+            {body ??
+              (variant === "hard"
+                ? "Trial gratismu segera berakhir. Upgrade ke Premium agar latihan, rekaman, dan analisis kamu tetap berjalan."
+                : "Fitur ini tersedia untuk pengguna Premium. Upgrade untuk membuka analisis lengkap, rekaman tanpa batas, dan seluruh modul latihan.")}
           </p>
         </div>
         <div className="mt-6 flex flex-col gap-2">

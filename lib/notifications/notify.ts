@@ -34,6 +34,16 @@ export async function notifyUser(
     // A notification-record failure must never break the job that emitted it.
     console.error("[notify] insert failed:", error);
   }
+  // The settings toggle scopes only push delivery -- the in-app record above
+  // is the user's own history and is always kept. Read failures fall through
+  // to sending, matching the rest of this function's best-effort posture.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("notif_push")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profile?.notif_push === false) return;
+
   await sendPushToUser(userId, {
     title: payload.title,
     body: payload.body,

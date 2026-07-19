@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Logo } from "@/components/ui/Logo";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { useGoBack } from "@/components/ui/useGoBack";
 import { cn } from "@/lib/utils";
@@ -61,13 +61,12 @@ export function TopAppBar({
           (() => {
             const content = (
               <>
-                <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-container-high border border-stroke-subtle shrink-0 relative flex items-center justify-center font-heading font-bold text-on-secondary">
-                  {avatarUrl ? (
-                    <Image src={avatarUrl} alt="" fill className="object-cover" />
-                  ) : (
-                    (avatarFallback ?? "").charAt(0).toUpperCase()
-                  )}
-                </div>
+                <UserAvatar
+                  src={avatarUrl}
+                  name={avatarFallback}
+                  size={40}
+                  className="border border-stroke-subtle"
+                />
                 {subtitle ? (
                   <div className="flex flex-col">
                     <span className="font-label-sm text-label-sm text-on-surface-variant">
@@ -121,7 +120,10 @@ export function TopAppBar({
         ) : null}
 
         {variant === "back" ? (
-          <h1 className="font-title-lg text-title-lg text-primary flex-1 text-center -ml-10">
+          // -ml-10 pulls the title box back over the 40px back button to
+          // optically centre it; without pointer-events-none this later
+          // sibling wins hit-testing and swallows clicks on the arrow.
+          <h1 className="font-title-lg text-title-lg text-primary flex-1 text-center -ml-10 pointer-events-none">
             {title}
           </h1>
         ) : null}

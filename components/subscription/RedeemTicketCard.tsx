@@ -73,7 +73,7 @@ export function RedeemTicketCard() {
           onKeyDown={(e) => {
             if (e.key === "Enter") void redeem();
           }}
-          placeholder="MISAL: LAUNCH-7K2QX9"
+          placeholder="XXXX-XXXX"
           autoCapitalize="characters"
           autoCorrect="off"
           spellCheck={false}

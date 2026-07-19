@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
+import { publicStorageUrl } from "@/lib/supabase/storage";
 
 export const runtime = "nodejs";
 
@@ -68,10 +69,7 @@ export async function POST(request: Request) {
         { status: 500 },
       );
     }
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("report-attachments").getPublicUrl(path);
-    screenshotUrl = publicUrl;
+    screenshotUrl = publicStorageUrl("report-attachments", path);
   }
 
   const { error: insertError } = await supabase.from("problem_reports").insert({

@@ -6,6 +6,7 @@ import { SubscribeMenuItem } from "@/components/payment/SubscribeMenuItem";
 import { TopUpQuotaMenuItem } from "@/components/payment/TopUpQuotaMenuItem";
 import { RedeemTicketCard } from "@/components/subscription/RedeemTicketCard";
 import { TopAppBar } from "@/components/layout/TopAppBar";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import {
   getFreeRecordingUsage,
   getRecordingQuota,
@@ -215,20 +216,12 @@ export default async function ProfilePage() {
         {/* Profile header */}
         <section className="bg-surface-card rounded-3xl shadow-soft flex flex-col items-center text-center relative overflow-hidden p-4 pb-6">
           <div className="absolute top-0 w-full h-32 bg-gradient-to-b from-secondary-container/10 to-transparent" />
-          <div className="relative w-24 h-24 rounded-full border-4 border-surface-card bg-secondary-container mb-4 overflow-hidden shadow-lg mt-4 flex items-center justify-center">
-            {profile?.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={profile.avatar_url}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="font-heading text-headline-md font-bold text-on-secondary">
-                {name.charAt(0).toUpperCase()}
-              </span>
-            )}
-          </div>
+          <UserAvatar
+            src={profile?.avatar_url}
+            name={name}
+            size={96}
+            className="relative border-4 border-surface-card mb-4 shadow-lg mt-4 text-headline-md"
+          />
           <h1 className="font-headline-lg-mobile text-headline-lg-mobile text-primary mb-1 font-bold">
             {name}
           </h1>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { publicStorageUrl } from "@/lib/supabase/storage";
 
 export const runtime = "nodejs";
 
@@ -46,12 +47,23 @@ export async function POST(request: Request) {
         ? "webp"
         : "jpg";
   const storagePath = `${user.id}/avatar.${ext}`;
-  const { error: uploadError } = await supabase.storage
-    .from("avatars")
-    .upload(storagePath, image, {
-      contentType: image.type,
-      upsert: true,
-    });
+  // One retry: the storage hop stalls intermittently, and a transient failure
+  // here is otherwise surfaced to the user as a bare gateway error on what
+  // looks to them like a simple photo change.
+  let uploadError: { message: string } | null = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { error } = await supabase.storage
+      .from("avatars")
+      .upload(storagePath, image, {
+        contentType: image.type,
+        upsert: true,
+      });
+    uploadError = error;
+    if (!error) break;
+    console.error(
+      `[avatar] upload attempt ${attempt + 1} failed for ${user.id}: ${error.message}`,
+    );
+  }
   if (uploadError) {
     return NextResponse.json(
       { error: `Upload gagal: ${uploadError.message}` },
@@ -59,12 +71,22 @@ export async function POST(request: Request) {
     );
   }
 
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from("avatars").getPublicUrl(storagePath);
+  // The filename carries the format, so switching formats (jpg -> png) leaves
+  // the previous object orphaned in the bucket forever. Drop the other two.
+  const stale = ["png", "webp", "jpg"]
+    .filter((e) => e !== ext)
+    .map((e) => `${user.id}/avatar.${e}`);
+  const { error: removeError } = await supabase.storage
+    .from("avatars")
+    .remove(stale);
+  if (removeError) {
+    // Non-fatal: the new photo is already live and avatar_url points at it.
+    console.error("[avatar] stale cleanup failed:", removeError.message);
+  }
+
   // Cache-bust so the CDN/browser fetch the freshly uploaded photo, since the
   // path (avatar.<ext>) is stable across replacements.
-  const avatarUrl = `${publicUrl}?v=${Date.now()}`;
+  const avatarUrl = `${publicStorageUrl("avatars", storagePath)}?v=${Date.now()}`;
 
   const { error: updateError } = await supabase
     .from("profiles")

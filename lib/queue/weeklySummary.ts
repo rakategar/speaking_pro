@@ -16,7 +16,7 @@ export async function generateWeeklySummaries() {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, full_name, streak_count, subscription_started_at")
+    .select("id, full_name, streak_count, subscription_started_at, notif_digest")
     .eq("subscription_tier", "premium")
     .not("subscription_started_at", "is", null);
 
@@ -97,13 +97,17 @@ export async function generateWeeklySummaries() {
       session_count: recordings?.length ?? 0,
     });
 
-    await notifyUser(supabase, profile.id, {
-      type: "summary",
-      title: "Ringkasan mingguan siap 📄",
-      body: "Laporan latihan mingguan Anda sudah bisa diunduh.",
-      url: "/summaries",
-      icon: "/stickers/faisal-v2/celebrating.png",
-    });
+    // The summary itself is always generated and stays on /summaries; the
+    // "Ringkasan & Laporan" setting only suppresses the nudge.
+    if (profile.notif_digest !== false) {
+      await notifyUser(supabase, profile.id, {
+        type: "summary",
+        title: "Ringkasan mingguan siap 📄",
+        body: "Laporan latihan mingguan Anda sudah bisa diunduh.",
+        url: "/summaries",
+        icon: "/stickers/faisal-v2/celebrating.png",
+      });
+    }
 
     console.log(`[weeklySummary] generated week ${weekIndex} for user ${profile.id}`);
   }

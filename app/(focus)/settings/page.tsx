@@ -12,7 +12,9 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, avatar_url, occupation, subscription_tier, subscription_renews_at")
+    .select(
+      "full_name, avatar_url, occupation, subscription_tier, subscription_renews_at, notif_push, notif_digest, notif_marketing",
+    )
     .eq("id", user.id)
     .maybeSingle();
 
@@ -25,6 +27,9 @@ export default async function SettingsPage() {
         avatar_url: profile?.avatar_url ?? null,
         subscription_tier: profile?.subscription_tier ?? "free",
         subscription_renews_at: profile?.subscription_renews_at ?? null,
+        notif_push: profile?.notif_push ?? true,
+        notif_digest: profile?.notif_digest ?? true,
+        notif_marketing: profile?.notif_marketing ?? true,
       }}
     />
   );

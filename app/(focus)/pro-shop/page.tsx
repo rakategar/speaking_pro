@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TopAppBar } from "@/components/layout/TopAppBar";
@@ -23,11 +25,27 @@ const TYPE_ICON: Record<string, string> = {
   subscription: "workspace_premium",
 };
 
-const TYPE_IMAGE: Record<string, string> = {
+const TYPE_IMAGE_PATH: Record<string, string> = {
   ebook: "/img/shop/ebook.webp",
   video_course: "/img/shop/video-course.webp",
   "1on1": "/img/shop/1on1.webp",
 };
+
+// Cache-busted with the file's own mtime: overwriting a product image (as
+// happens whenever a new photo comes in) changes this URL automatically, so
+// neither Next's image optimizer cache nor the browser's 4h cache keeps
+// serving the old bytes under the old URL. Read once per server process --
+// these files only change via redeploy, which restarts the process anyway.
+const TYPE_IMAGE: Record<string, string> = Object.fromEntries(
+  Object.entries(TYPE_IMAGE_PATH).map(([type, src]) => {
+    try {
+      const mtime = fs.statSync(path.join(process.cwd(), "public", src)).mtimeMs;
+      return [type, `${src}?v=${Math.round(mtime)}`];
+    } catch {
+      return [type, src];
+    }
+  }),
+);
 
 export default async function ProShopPage() {
   const supabase = await createClient();

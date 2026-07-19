@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Toggle } from "@/components/ui/Toggle";
 import { SignOutButton } from "@/components/profile/SignOutButton";
 import { TopAppBar } from "@/components/layout/TopAppBar";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 
 type Profile = {
   full_name: string;
@@ -13,6 +14,9 @@ type Profile = {
   avatar_url: string | null;
   subscription_tier: string;
   subscription_renews_at: string | null;
+  notif_push: boolean;
+  notif_digest: boolean;
+  notif_marketing: boolean;
 };
 
 type NotifPrefs = {
@@ -21,7 +25,20 @@ type NotifPrefs = {
   marketing: boolean;
 };
 
-const NOTIF_KEY = "speaking-pro:notif-prefs";
+// Each toggle maps to a profiles column, read by lib/notifications/notify.ts
+// (push) and the weekly-summary / monthly-certificate / trial-reminder jobs
+// (digest, marketing). Spelled out rather than computed so the update payload
+// keeps its literal key type.
+function notifPatch(key: keyof NotifPrefs, value: boolean) {
+  switch (key) {
+    case "push":
+      return { notif_push: value };
+    case "digest":
+      return { notif_digest: value };
+    case "marketing":
+      return { notif_marketing: value };
+  }
+}
 
 export function SettingsView({
   email,
@@ -42,22 +59,31 @@ export function SettingsView({
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const [prefs, setPrefs] = useState<NotifPrefs>({
-    push: true,
-    digest: true,
-    marketing: false,
+    push: initialProfile.notif_push,
+    digest: initialProfile.notif_digest,
+    marketing: initialProfile.notif_marketing,
   });
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(NOTIF_KEY);
-      if (raw) setPrefs(JSON.parse(raw));
-    } catch {}
-  }, []);
-
-  function setPref<K extends keyof NotifPrefs>(key: K, value: boolean) {
-    const next = { ...prefs, [key]: value };
-    setPrefs(next);
-    localStorage.setItem(NOTIF_KEY, JSON.stringify(next));
+  // Persisted on the profile (not localStorage) so the preference follows the
+  // account across devices and the server-side jobs can read it. Optimistic:
+  // flip immediately, roll back if the write fails.
+  async function setPref<K extends keyof NotifPrefs>(key: K, value: boolean) {
+    // Functional updates throughout so a rollback reverts only this key and
+    // can't clobber another toggle flipped while the write was in flight.
+    setPrefs((p) => ({ ...p, [key]: value }));
+    setNotice(null);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase
+      .from("profiles")
+      .update(notifPatch(key, value))
+      .eq("id", user.id);
+    if (error) {
+      setPrefs((p) => ({ ...p, [key]: !value }));
+      setNotice(`Gagal menyimpan preferensi: ${error.message}`);
+    }
   }
 
   async function uploadAvatar(e: React.ChangeEvent<HTMLInputElement>) {
@@ -80,6 +106,10 @@ export function SettingsView({
       }
       setNotice("Foto profil diperbarui.");
       router.refresh();
+    } catch {
+      // Without this a dropped connection left the spinner clearing with no
+      // explanation at all.
+      setNotice("Gagal mengunggah foto. Periksa koneksi lalu coba lagi.");
     } finally {
       setUploadingAvatar(false);
     }
@@ -182,20 +212,12 @@ export function SettingsView({
           ) : (
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mt-2">
               <div className="relative shrink-0">
-                <div className="w-24 h-24 rounded-full border-4 border-surface shadow-sm bg-secondary-container flex items-center justify-center overflow-hidden">
-                  {initialProfile.avatar_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={initialProfile.avatar_url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="font-heading text-headline-md font-bold text-on-secondary">
-                      {displayName.charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                </div>
+                <UserAvatar
+                  src={initialProfile.avatar_url}
+                  name={displayName}
+                  size={96}
+                  className="border-4 border-surface shadow-sm text-headline-md"
+                />
                 <label
                   className={`absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-primary-container text-on-primary flex items-center justify-center shadow-md border-2 border-surface-card cursor-pointer hover:opacity-90 active:scale-95 transition ${
                     uploadingAvatar ? "opacity-60 pointer-events-none" : ""
@@ -274,17 +296,17 @@ export function SettingsView({
                 {
                   key: "push",
                   title: "Push Notifications",
-                  subtitle: "Pengingat latihan harian",
+                  subtitle: "Notifikasi langsung di perangkat ini",
                 },
                 {
                   key: "digest",
-                  title: "Email Digest",
-                  subtitle: "Rapor progres mingguan",
+                  title: "Ringkasan & Laporan",
+                  subtitle: "Notifikasi ringkasan mingguan & sertifikat",
                 },
                 {
                   key: "marketing",
                   title: "Marketing Emails",
-                  subtitle: "Penawaran spesial dan berita",
+                  subtitle: "Email penawaran dan ajakan upgrade",
                 },
               ] as const
             ).map((item) => (

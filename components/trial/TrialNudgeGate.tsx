@@ -6,6 +6,12 @@ import { UpgradeNudgeModal } from "@/components/trial/UpgradeNudgeModal";
 
 type NudgesSeen = Record<string, boolean>;
 
+const NUDGE_BODY: Record<string, string> = {
+  day3: "Kamu sudah jalan 3 hari bareng Speaking Pro. Upgrade ke Premium untuk membuka analisis lengkap, rekaman tanpa batas, dan seluruh modul latihan.",
+  day5: "Tinggal 2 hari lagi trial gratismu. Pengguna Premium berlatih dengan analisis penuh, rekaman tanpa batas, dan laporan mingguan — lanjutkan momentumnya.",
+  day7: "Hari ini hari terakhir trial gratismu. Upgrade sekarang supaya latihan, rekaman, dan analisis kamu tidak terputus mulai besok.",
+};
+
 // Mounted once on the dashboard for free-tier trial users. Shows a soft
 // upgrade nudge on trial day 3/5, a heavier "hard push" nudge on day 7 --
 // each only once per user (tracked in profiles.trial_nudges_seen, a DB
@@ -44,7 +50,7 @@ export function TrialNudgeGate({
           ? "Hari Terakhir Trial Gratis Kamu"
           : `Hari ke-${trialDay} Trial Kamu`
       }
-      body={`[Upgrade nudge copy — day ${trialDay}]`}
+      body={NUDGE_BODY[key]}
       onClose={handleClose}
     />
   );

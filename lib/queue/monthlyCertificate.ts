@@ -26,7 +26,7 @@ export async function generateMonthlyCertificates() {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, full_name, subscription_started_at")
+    .select("id, full_name, subscription_started_at, notif_digest")
     .eq("subscription_tier", "premium")
     .not("subscription_started_at", "is", null);
 
@@ -106,13 +106,17 @@ export async function generateMonthlyCertificates() {
       badge_tier: badgeTier,
     });
 
-    await notifyUser(supabase, profile.id, {
-      type: "certificate",
-      title: "Sertifikat 1 Bulan siap 🏆",
-      body: "Selamat! Sertifikat pencapaian 1 bulan Premium Anda sudah bisa diunduh.",
-      url: "/summaries",
-      icon: BADGE_ICON[badgeTier],
-    });
+    // Certificate is always generated and stays on /summaries; the
+    // "Ringkasan & Laporan" setting only suppresses the nudge.
+    if (profile.notif_digest !== false) {
+      await notifyUser(supabase, profile.id, {
+        type: "certificate",
+        title: "Sertifikat 1 Bulan siap 🏆",
+        body: "Selamat! Sertifikat pencapaian 1 bulan Premium Anda sudah bisa diunduh.",
+        url: "/summaries",
+        icon: BADGE_ICON[badgeTier],
+      });
+    }
 
     console.log(`[monthlyCertificate] generated certificate for user ${profile.id} (${badgeTier})`);
   }
