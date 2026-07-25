@@ -4,6 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
 // Paths reachable without a session. /analyst has its own password gate;
 // manifest + service worker must be public or the PWA install breaks.
 // The Midtrans webhook authenticates via sha512 signature, not a session.
+// /install is the landing page's Download CTA target -- anonymous visitors
+// must reach it before they have an account.
 const PUBLIC_PATHS = [
   "/login",
   "/auth",
@@ -13,6 +15,7 @@ const PUBLIC_PATHS = [
   "/manifest.json",
   "/sw.js",
   "/icons",
+  "/install",
 ];
 
 // Exempt from the onboarding gate below: the questionnaire page itself and

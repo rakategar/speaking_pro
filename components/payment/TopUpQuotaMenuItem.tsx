@@ -39,6 +39,8 @@ export function TopUpQuotaMenuItem({
       }
     } catch {
       // The webhook still reconciles the order server-side.
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -51,6 +53,7 @@ export function TopUpQuotaMenuItem({
       const json = await res.json();
       if (!res.ok) {
         setMessage(json.error ?? `Gagal memulai pembayaran (HTTP ${res.status})`);
+        setBusy(false);
         return;
       }
       orderIdRef.current = json.orderId;
@@ -58,12 +61,15 @@ export function TopUpQuotaMenuItem({
       window.snap!.pay(json.token, {
         onSuccess: () => void confirmStatus(),
         onPending: () => void confirmStatus(),
-        onError: () => setMessage("Pembayaran gagal. Coba lagi."),
+        onError: () => {
+          setMessage("Pembayaran gagal. Coba lagi.");
+          setBusy(false);
+        },
         onClose: () => void confirmStatus(),
       });
+      // Snap opens a modal; `busy` stays true until a callback resolves it.
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Terjadi kesalahan");
-    } finally {
       setBusy(false);
     }
   }
