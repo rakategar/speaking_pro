@@ -172,6 +172,133 @@ export type Database = {
           },
         ]
       }
+      client_admins: {
+        Row: {
+          id: string
+          client_org_id: string
+          email: string
+          full_name: string | null
+          password_hash: string
+          role: string
+          active: boolean
+          must_change_password: boolean
+          last_login_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          client_org_id: string
+          email: string
+          full_name?: string | null
+          password_hash: string
+          role?: string
+          active?: boolean
+          must_change_password?: boolean
+          last_login_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          client_org_id?: string
+          email?: string
+          full_name?: string | null
+          password_hash?: string
+          role?: string
+          active?: boolean
+          must_change_password?: boolean
+          last_login_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_admins_client_org_id_fkey"
+            columns: ["client_org_id"]
+            isOneToOne: false
+            referencedRelation: "client_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_ai_reports: {
+        Row: {
+          id: string
+          client_org_id: string
+          period_days: number
+          payload: Json
+          facts_hash: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          client_org_id: string
+          period_days: number
+          payload: Json
+          facts_hash: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          client_org_id?: string
+          period_days?: number
+          payload?: Json
+          facts_hash?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_ai_reports_client_org_id_fkey"
+            columns: ["client_org_id"]
+            isOneToOne: false
+            referencedRelation: "client_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_notification_log: {
+        Row: {
+          id: string
+          client_org_id: string
+          client_admin_id: string | null
+          title: string
+          body: string
+          recipient_count: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          client_org_id: string
+          client_admin_id?: string | null
+          title: string
+          body: string
+          recipient_count?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          client_org_id?: string
+          client_admin_id?: string | null
+          title?: string
+          body?: string
+          recipient_count?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_notification_log_client_org_id_fkey"
+            columns: ["client_org_id"]
+            isOneToOne: false
+            referencedRelation: "client_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_notification_log_client_admin_id_fkey"
+            columns: ["client_admin_id"]
+            isOneToOne: false
+            referencedRelation: "client_admins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_organizations: {
         Row: {
           id: string

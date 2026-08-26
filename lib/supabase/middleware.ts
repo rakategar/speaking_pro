@@ -2,7 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_AUTH_COOKIE_NAME } from "@/lib/supabase/config";
 
-// Paths reachable without a session. /analyst has its own password gate;
+// Paths reachable without a Supabase session. Two dashboards sit behind their
+// own gates instead: /analyst (env credentials, lib/analyst/auth.ts) and
+// /client (per-organization accounts, lib/client/session.ts). Both must be
+// exempt here or this middleware would bounce them to the participant login
+// they can never satisfy -- neither has a row in auth.users.
 // manifest + service worker must be public or the PWA install breaks.
 // The Midtrans webhook authenticates via sha512 signature, not a session.
 // /install is the landing page's Download CTA target -- anonymous visitors
@@ -12,6 +16,8 @@ const PUBLIC_PATHS = [
   "/auth",
   "/analyst",
   "/api/analyst",
+  "/client",
+  "/api/client",
   "/api/payments/midtrans-notify",
   "/manifest.json",
   "/sw.js",

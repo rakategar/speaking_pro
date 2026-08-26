@@ -52,29 +52,39 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(ha, hb);
 }
 
-/** Verifies a username/password pair against the configured hash. */
-export function checkCredentials(username: string, password: string): boolean {
-  const expectedUser = env("ANALYST_USERNAME");
-  const stored = env("ANALYST_PASSWORD_HASH");
-  if (!expectedUser || !stored) return false;
-
+/**
+ * Checks a password against a stored "scrypt:<saltHex>:<hashHex>" string.
+ *
+ * Shared with the B2B client dashboard (lib/client/session.ts), whose
+ * per-account hashes in client_admins use this exact format. Kept here rather
+ * than copied so there is one implementation of how a password is verified --
+ * a second copy is how the two drift and one of them ends up weaker.
+ */
+export function verifyScryptHash(password: string, stored: string): boolean {
   const [scheme, saltHex, hashHex] = stored.split(":");
   if (scheme !== "scrypt" || !saltHex || !hashHex) return false;
-
-  // Both checks always run: short-circuiting on the username would reveal
-  // whether it was correct via response timing.
-  const userOk = safeEqual(username, expectedUser);
-  let passOk = false;
   try {
     const derived = scryptSync(
       password,
       Buffer.from(saltHex, "hex"),
       32,
     ).toString("hex");
-    passOk = safeEqual(derived, hashHex);
+    return safeEqual(derived, hashHex);
   } catch {
-    passOk = false;
+    return false;
   }
+}
+
+/** Verifies a username/password pair against the configured hash. */
+export function checkCredentials(username: string, password: string): boolean {
+  const expectedUser = env("ANALYST_USERNAME");
+  const stored = env("ANALYST_PASSWORD_HASH");
+  if (!expectedUser || !stored) return false;
+
+  // Both checks always run: short-circuiting on the username would reveal
+  // whether it was correct via response timing.
+  const userOk = safeEqual(username, expectedUser);
+  const passOk = verifyScryptHash(password, stored);
   return userOk && passOk;
 }
 

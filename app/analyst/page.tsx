@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/ui/Logo";
 import { TicketGenerateSection } from "@/components/analyst/TicketGenerateSection";
 import { TicketHistorySection } from "@/components/analyst/TicketHistorySection";
+import { ClientAdminsSection } from "@/components/analyst/ClientAdminsSection";
 
 type StageStat = {
   count: number;
@@ -1564,11 +1565,18 @@ function UserManagementSection() {
 // Page
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "monitoring" | "users" | "laporan" | "tiket" | "riwayat-tiket";
+type Tab =
+  | "monitoring"
+  | "users"
+  | "client-b2b"
+  | "laporan"
+  | "tiket"
+  | "riwayat-tiket";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "monitoring", label: "Monitoring" },
   { id: "users", label: "Manajemen User" },
+  { id: "client-b2b", label: "Client B2B" },
   { id: "laporan", label: "Laporan Masalah" },
   { id: "tiket", label: "Generate Ticket" },
   { id: "riwayat-tiket", label: "Riwayat Ticket" },
@@ -1877,6 +1885,8 @@ export default function AnalystPage() {
           </div>
         ) : tab === "users" ? (
           <UserManagementSection />
+        ) : tab === "client-b2b" ? (
+          <ClientAdminsSection />
         ) : tab === "tiket" ? (
           <TicketGenerateSection
             onGenerated={() => setTicketReload((n) => n + 1)}

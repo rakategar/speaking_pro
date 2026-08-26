@@ -27,14 +27,46 @@ function deriveStatus(
   return new Date(trialEndsAt) > new Date() ? "trial" : "expired";
 }
 
+const PER_PAGE = 500;
+// Hard ceiling so a bug upstream can't turn this into an unbounded loop
+// against the auth API. 50k accounts is far beyond anything this product
+// will hit before the listing needs real pagination in the UI anyway.
+const MAX_PAGES = 100;
+
+/**
+ * Every auth user, not just the first page.
+ *
+ * This used to be a single listUsers({ page: 1, perPage: 500 }) call. That is
+ * silently wrong the moment the 501st account signs up -- accounts past the
+ * cut simply vanish from /analyst, and (since the B2B dashboard filters this
+ * same list) a client's participants would start disappearing from their own
+ * dashboard with no error anywhere.
+ */
+async function listAllAuthUsers(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+): Promise<{ users: { id: string; email?: string; created_at: string }[]; error?: { message: string } }> {
+  const users: { id: string; email?: string; created_at: string }[] = [];
+  for (let page = 1; page <= MAX_PAGES; page += 1) {
+    const { data, error } = await supabase.auth.admin.listUsers({
+      page,
+      perPage: PER_PAGE,
+    });
+    if (error) return { users, error };
+    const batch = data?.users ?? [];
+    users.push(...batch);
+    if (batch.length < PER_PAGE) break;
+  }
+  return { users };
+}
+
 export async function listAnalystUsers(): Promise<
   { items: AnalystUserItem[]; error?: undefined } | { items?: undefined; error: string }
 > {
   const supabase = createServiceRoleClient();
 
-  const [{ data: usersData, error: usersError }, { data: profiles }, { data: orgs }] =
+  const [{ users: authUsers, error: usersError }, { data: profiles }, { data: orgs }] =
     await Promise.all([
-      supabase.auth.admin.listUsers({ page: 1, perPage: 500 }),
+      listAllAuthUsers(supabase),
       supabase
         .from("profiles")
         .select(
@@ -48,7 +80,7 @@ export async function listAnalystUsers(): Promise<
 
   const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
   const orgNames = new Map((orgs ?? []).map((o) => [o.id, o.name]));
-  const items = (usersData?.users ?? [])
+  const items = authUsers
     .map((u) => {
       const p = byId.get(u.id);
       const subscriptionTier = p?.subscription_tier ?? "free";
