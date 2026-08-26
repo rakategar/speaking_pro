@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   const { data: tickets, error } = await supabase
     .from("redeem_tickets")
     .select(
-      "id, code, batch_label, duration_days, status, redeemed_by, redeemed_at, created_at",
+      "id, code, batch_label, duration_days, status, redeemed_by, redeemed_at, client_org_id, created_at",
     )
     .order("created_at", { ascending: false })
     .limit(500);
@@ -55,8 +55,18 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Organization names for the "client" column. Tiny table, so one unfiltered
+  // read beats building an IN list.
+  const { data: orgs } = await supabase
+    .from("client_organizations")
+    .select("id, name");
+  const orgNames = new Map((orgs ?? []).map((o) => [o.id, o.name]));
+
   const items = (tickets ?? []).map((t) => ({
     ...t,
+    client_org_name: t.client_org_id
+      ? (orgNames.get(t.client_org_id) ?? null)
+      : null,
     redeemed_by_name: t.redeemed_by
       ? (profiles?.find((p) => p.id === t.redeemed_by)?.full_name ?? "Pengguna")
       : null,
@@ -83,6 +93,10 @@ export async function POST(request: NextRequest) {
   const prefix = sanitizePrefix(body.prefix);
   const quantity = Number(body.quantity);
   const durationDays = Number(body.durationDays);
+  const clientOrgId =
+    typeof body.clientOrgId === "string" && body.clientOrgId
+      ? body.clientOrgId
+      : null;
 
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_BATCH_QUANTITY) {
     return NextResponse.json(
@@ -102,6 +116,24 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServiceRoleClient();
+
+  // Validated up front rather than letting the FK reject mid-batch: a foreign
+  // key violation partway through would leave the retry loop reporting a
+  // collision that never happened.
+  if (clientOrgId) {
+    const { data: org } = await supabase
+      .from("client_organizations")
+      .select("id")
+      .eq("id", clientOrgId)
+      .maybeSingle();
+    if (!org) {
+      return NextResponse.json(
+        { error: "Client yang dipilih tidak ditemukan" },
+        { status: 400 },
+      );
+    }
+  }
+
   const created: string[] = [];
 
   // The unique constraint is the source of truth for collisions -- checking
@@ -116,6 +148,7 @@ export async function POST(request: NextRequest) {
           code,
           batch_label: prefix || null,
           duration_days: durationDays,
+          client_org_id: clientOrgId,
         })),
       )
       .select("code");

@@ -35,7 +35,9 @@ export default async function ProfilePage() {
     await Promise.all([
       supabase
         .from("profiles")
-        .select("full_name, avatar_url, occupation, subscription_tier, subscription_renews_at")
+        .select(
+          "full_name, avatar_url, occupation, subscription_tier, subscription_renews_at, client_org_id, client_organizations(name, short_name, accent_color)",
+        )
         .eq("id", user.id)
         .maybeSingle(),
       supabase
@@ -90,6 +92,10 @@ export default async function ProfilePage() {
   const ringCircumference = 2 * Math.PI * 34;
 
   const isPro = profile?.subscription_tier === "premium";
+  // B2B participants show their organization instead of the Premium pill --
+  // "Kementerian Kehutanan" is the identity that matters to them, and their
+  // access came with the program rather than from a purchase they made.
+  const clientOrg = profile?.client_organizations ?? null;
 
   // The weekly recording budget only applies to Premium, so free users never
   // see a quota card or a top-up row.
@@ -233,23 +239,42 @@ export default async function ProfilePage() {
             </span>
             Speaking Level: {speakingLevel(avgScore)}
           </div>
-          <div
-            className={
-              isPro
-                ? "mt-2 rounded-full px-4 py-1.5 flex items-center gap-1.5 font-label-sm text-label-sm bg-tertiary-fixed-dim/20 text-on-tertiary-container border border-tertiary-fixed-dim/30"
-                : "mt-2 rounded-full px-4 py-1.5 flex items-center gap-1.5 font-label-sm text-label-sm bg-surface-container text-on-surface-variant border border-stroke-subtle"
-            }
-          >
-            <span
-              className="material-symbols-outlined text-[16px]"
-              style={{ fontVariationSettings: "'FILL' 1" }}
+          {clientOrg ? (
+            <div
+              className="mt-2 rounded-full px-4 py-1.5 flex items-center gap-1.5 font-label-sm text-label-sm border"
+              style={{
+                color: clientOrg.accent_color,
+                borderColor: `${clientOrg.accent_color}59`,
+                backgroundColor: `${clientOrg.accent_color}1a`,
+              }}
             >
-              {isPro ? "verified" : "lock"}
-            </span>
-            {isPro
-              ? `Berlangganan Premium${renews ? ` • s.d. ${renews}` : ""}`
-              : "Belum Berlangganan"}
-          </div>
+              <span
+                className="material-symbols-outlined text-[16px]"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                apartment
+              </span>
+              {clientOrg.name}
+            </div>
+          ) : (
+            <div
+              className={
+                isPro
+                  ? "mt-2 rounded-full px-4 py-1.5 flex items-center gap-1.5 font-label-sm text-label-sm bg-tertiary-fixed-dim/20 text-on-tertiary-container border border-tertiary-fixed-dim/30"
+                  : "mt-2 rounded-full px-4 py-1.5 flex items-center gap-1.5 font-label-sm text-label-sm bg-surface-container text-on-surface-variant border border-stroke-subtle"
+              }
+            >
+              <span
+                className="material-symbols-outlined text-[16px]"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                {isPro ? "verified" : "lock"}
+              </span>
+              {isPro
+                ? `Berlangganan Premium${renews ? ` • s.d. ${renews}` : ""}`
+                : "Belum Berlangganan"}
+            </div>
+          )}
         </section>
 
         {/* Stats grid */}

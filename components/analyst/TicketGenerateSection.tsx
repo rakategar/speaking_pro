@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const inputCls =
   "w-full rounded-xl border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary-container/30";
@@ -23,16 +23,35 @@ function Field({
   );
 }
 
+type ClientOrg = { id: string; name: string; active: boolean };
+
 // Mints a batch of single-use redeem codes. Each code grants Premium for
-// `durationDays` and can be used by exactly one user.
+// `durationDays` and can be used by exactly one user. A batch minted for a
+// B2B client also stamps that client's badge on whoever redeems it, so one
+// code hand-out covers both access and program membership.
 export function TicketGenerateSection({ onGenerated }: { onGenerated?: () => void }) {
   const [prefix, setPrefix] = useState("");
   const [quantity, setQuantity] = useState("10");
   const [durationDays, setDurationDays] = useState("30");
+  const [clientOrgId, setClientOrgId] = useState("");
+  const [orgs, setOrgs] = useState<ClientOrg[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [codes, setCodes] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/analyst/clients", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (active && json) setOrgs(json.items ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function generate() {
     if (busy) return;
@@ -47,6 +66,7 @@ export function TicketGenerateSection({ onGenerated }: { onGenerated?: () => voi
           prefix,
           quantity: Number(quantity),
           durationDays: Number(durationDays),
+          clientOrgId: clientOrgId || null,
         }),
       });
       const json = await res.json();
@@ -112,6 +132,25 @@ export function TicketGenerateSection({ onGenerated }: { onGenerated?: () => voi
               onChange={(e) => setDurationDays(e.target.value)}
               className={inputCls}
             />
+          </Field>
+          <Field
+            label="Client B2B"
+            hint="Opsional. Penukar kode langsung dapat badge ini."
+          >
+            <select
+              value={clientOrgId}
+              onChange={(e) => setClientOrgId(e.target.value)}
+              className={inputCls}
+            >
+              <option value="">— Tanpa badge (user publik) —</option>
+              {orgs
+                .filter((o) => o.active)
+                .map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+            </select>
           </Field>
         </div>
 

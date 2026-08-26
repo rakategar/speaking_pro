@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     })
     .eq("code", code)
     .eq("status", "unused")
-    .select("id, duration_days")
+    .select("id, duration_days, client_org_id")
     .maybeSingle();
 
   if (claimError) {
@@ -89,10 +89,31 @@ export async function POST(request: Request) {
     // No receiptOrder: nothing was paid, so there's no transaction to bill.
     await activatePremium(admin, user.id, renewsAt, user.email ?? undefined);
 
+    // A batch minted for a B2B client also stamps the badge. Best-effort and
+    // deliberately after activation: Premium is what the user redeemed for,
+    // and a failure to write a cosmetic badge must not roll the ticket back.
+    let orgName: string | null = null;
+    if (claimed.client_org_id) {
+      try {
+        const { data: org } = await admin
+          .from("client_organizations")
+          .select("name")
+          .eq("id", claimed.client_org_id)
+          .maybeSingle();
+        orgName = org?.name ?? null;
+        await admin
+          .from("profiles")
+          .update({ client_org_id: claimed.client_org_id })
+          .eq("id", user.id);
+      } catch (e) {
+        console.error("[redeem] client badge not applied:", e);
+      }
+    }
+
     await notifyUser(admin, user.id, {
       type: "subscription",
       title: "Akses Premium aktif 🎉",
-      body: `Kode ticket berhasil ditukar. Premium Anda aktif sampai ${renewsAt.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}.`,
+      body: `Kode ticket berhasil ditukar.${orgName ? ` Anda terdaftar sebagai peserta ${orgName}.` : ""} Premium Anda aktif sampai ${renewsAt.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}.`,
       url: "/profile",
       icon: "/stickers/faisal-v2/celebrating.png",
     });

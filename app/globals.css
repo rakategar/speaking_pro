@@ -623,3 +623,66 @@ html.fonts-loaded .material-symbols-outlined {
     display: none;
   }
 }
+
+/* Scrubber for the report-page audio player (components/report/AudioPlayer).
+   A range input styled to look like a progress bar: the filled portion is
+   painted with a gradient driven by the --progress custom property the
+   component sets, because there is no cross-browser pseudo-element for
+   "the part of the track before the thumb". */
+.audio-scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+.audio-scrub:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.audio-scrub::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-secondary-container) 0%,
+    var(--color-secondary-container) var(--progress, 0%),
+    var(--color-surface-container-high) var(--progress, 0%),
+    var(--color-surface-container-high) 100%
+  );
+}
+.audio-scrub::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-surface-container-high);
+}
+.audio-scrub::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-secondary-container);
+}
+.audio-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-secondary-container);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  /* Centres the 14px thumb on the 6px track. */
+  margin-top: -4px;
+}
+.audio-scrub::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: var(--color-secondary-container);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+}
+.audio-scrub:focus-visible {
+  outline: 2px solid var(--color-secondary-container);
+  outline-offset: 4px;
+  border-radius: 999px;
+}

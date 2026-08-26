@@ -13,6 +13,8 @@ export type AnalystUserItem = {
   trial_started_at: string | null;
   trial_ends_at: string | null;
   status: TrialStatusLabel;
+  client_org_id: string | null;
+  client_org_name: string | null;
   created_at: string;
 };
 
@@ -30,20 +32,22 @@ export async function listAnalystUsers(): Promise<
 > {
   const supabase = createServiceRoleClient();
 
-  const [{ data: usersData, error: usersError }, { data: profiles }] =
+  const [{ data: usersData, error: usersError }, { data: profiles }, { data: orgs }] =
     await Promise.all([
       supabase.auth.admin.listUsers({ page: 1, perPage: 500 }),
       supabase
         .from("profiles")
         .select(
-          "id, full_name, subscription_tier, subscription_renews_at, trial_started_at, trial_ends_at",
+          "id, full_name, subscription_tier, subscription_renews_at, trial_started_at, trial_ends_at, client_org_id",
         ),
+      supabase.from("client_organizations").select("id, name"),
     ]);
   if (usersError) {
     return { error: usersError.message };
   }
 
   const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
+  const orgNames = new Map((orgs ?? []).map((o) => [o.id, o.name]));
   const items = (usersData?.users ?? [])
     .map((u) => {
       const p = byId.get(u.id);
@@ -58,6 +62,10 @@ export async function listAnalystUsers(): Promise<
         trial_started_at: p?.trial_started_at ?? null,
         trial_ends_at: trialEndsAt,
         status: deriveStatus(subscriptionTier, trialEndsAt),
+        client_org_id: p?.client_org_id ?? null,
+        client_org_name: p?.client_org_id
+          ? (orgNames.get(p.client_org_id) ?? null)
+          : null,
         created_at: u.created_at,
       };
     })

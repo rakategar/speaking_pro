@@ -354,6 +354,8 @@ type UserItem = {
   trial_started_at: string | null;
   trial_ends_at: string | null;
   status: "premium" | "trial" | "expired" | "not_started";
+  client_org_id: string | null;
+  client_org_name: string | null;
   created_at: string;
 };
 
@@ -681,10 +683,355 @@ function SetPasswordModal({
   );
 }
 
+type ClientOrg = {
+  id: string;
+  name: string;
+  short_name: string | null;
+  accent_color: string;
+  active: boolean;
+  member_count: number;
+};
+
+/** Shared loader for the client list -- used by the picker and the manager. */
+function useClientOrgs() {
+  const [orgs, setOrgs] = useState<ClientOrg[]>([]);
+  const reload = useCallback(async () => {
+    const res = await fetch("/api/analyst/clients", { cache: "no-store" });
+    if (!res.ok) return;
+    const json = await res.json();
+    setOrgs(json.items ?? []);
+  }, []);
+  // The initial fetch is inlined rather than calling reload(), so the state
+  // update happens inside a promise callback the compiler can see is async --
+  // calling reload() straight from the effect body trips
+  // react-hooks/set-state-in-effect.
+  useEffect(() => {
+    let active = true;
+    fetch("/api/analyst/clients", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (active && json) setOrgs(json.items ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+  return { orgs, reload };
+}
+
+/** The org pill, reused in the user table and the ticket history. */
+function ClientPill({ name, color }: { name: string; color: string }) {
+  return (
+    <span
+      className="rounded-full border px-2 py-0.5 text-xs font-semibold"
+      style={{
+        color,
+        borderColor: `${color}59`,
+        backgroundColor: `${color}1a`,
+      }}
+    >
+      {name}
+    </span>
+  );
+}
+
+// Assigns (or clears) the client badge. Handles one user and a bulk selection
+// with the same form -- the only difference is which body shape it POSTs.
+function SetClientModal({
+  users,
+  orgs,
+  onClose,
+  onSaved,
+}: {
+  users: UserItem[];
+  orgs: ClientOrg[];
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [orgId, setOrgId] = useState(
+    users.length === 1 ? (users[0].client_org_id ?? "") : "",
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/analyst/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          users.length === 1
+            ? { userId: users[0].id, client_org_id: orgId || null }
+            : { userIds: users.map((u) => u.id), client_org_id: orgId || null },
+        ),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setError(json.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      await onSaved();
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal
+      title="Badge Client"
+      subtitle={
+        users.length === 1
+          ? users[0].email
+          : `${users.length} user terpilih akan diberi badge yang sama.`
+      }
+      onClose={onClose}
+    >
+      <form onSubmit={submit} className="space-y-3">
+        <Field label="Client">
+          <select
+            value={orgId}
+            onChange={(e) => setOrgId(e.target.value)}
+            className={inputCls}
+          >
+            <option value="">— Tanpa badge (user publik) —</option>
+            {orgs
+              .filter((o) => o.active || o.id === orgId)
+              .map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                  {o.active ? "" : " (nonaktif)"}
+                </option>
+              ))}
+          </select>
+        </Field>
+        {orgs.length === 0 && (
+          <p className="text-xs text-text-secondary">
+            Belum ada client. Buat dulu di panel &quot;Client B2B&quot; di atas
+            tabel.
+          </p>
+        )}
+        {error && <p className="text-sm text-red-500">{error}</p>}
+        <button
+          type="submit"
+          disabled={saving}
+          className="w-full rounded-full bg-primary-container py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+        >
+          {saving ? "Menyimpan..." : "Simpan Badge"}
+        </button>
+      </form>
+    </Modal>
+  );
+}
+
+// Create/rename/recolor/delete the B2B clients themselves. Renaming here
+// changes the badge everywhere at once, which is the whole reason clients are
+// a table rather than a free-text column on each profile.
+function ClientOrganizationsSection({
+  orgs,
+  reload,
+  onChanged,
+}: {
+  orgs: ClientOrg[];
+  reload: () => Promise<void>;
+  /** Refreshes the user table, whose badge column reads these names. */
+  onChanged: () => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [shortName, setShortName] = useState("");
+  const [color, setColor] = useState("#00629d");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function send(
+    method: "POST" | "PATCH" | "DELETE",
+    body: Record<string, unknown>,
+  ) {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/analyst/clients", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setError(json.error ?? `HTTP ${res.status}`);
+        return false;
+      }
+      await reload();
+      await onChanged();
+      return true;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function create(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    const ok = await send("POST", {
+      name,
+      short_name: shortName,
+      accent_color: color,
+    });
+    if (ok) {
+      setName("");
+      setShortName("");
+      setColor("#00629d");
+    }
+  }
+
+  async function rename(org: ClientOrg) {
+    const next = window.prompt("Nama client:", org.name);
+    if (next === null || !next.trim() || next === org.name) return;
+    await send("PATCH", { id: org.id, name: next });
+  }
+
+  async function remove(org: ClientOrg) {
+    if (
+      !window.confirm(
+        `Hapus client "${org.name}"?\n\n${org.member_count} user akan kehilangan badge ini, tapi akun mereka tidak dihapus.`,
+      )
+    )
+      return;
+    await send("DELETE", { id: org.id });
+  }
+
+  return (
+    <div className="mb-4 rounded-2xl border border-stroke-subtle bg-surface-card shadow-soft">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+      >
+        <span className="flex items-center gap-2 text-sm font-bold text-primary">
+          <span className="material-symbols-outlined text-[18px]">
+            apartment
+          </span>
+          Client B2B
+          <span className="text-xs font-normal text-text-secondary">
+            ({orgs.length} client)
+          </span>
+        </span>
+        <span className="material-symbols-outlined text-[20px] text-text-secondary">
+          {open ? "expand_less" : "expand_more"}
+        </span>
+      </button>
+
+      {open && (
+        <div className="border-t border-stroke-subtle p-4">
+          <form
+            onSubmit={create}
+            className="mb-4 flex flex-wrap items-end gap-3"
+          >
+            <div className="min-w-[12rem] flex-1">
+              <Field label="Nama Client">
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Kementerian Kehutanan"
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+            <div className="w-32">
+              <Field label="Singkatan">
+                <input
+                  value={shortName}
+                  onChange={(e) => setShortName(e.target.value)}
+                  placeholder="KLHK"
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+            <div className="w-24">
+              <Field label="Warna">
+                <input
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  className="h-[38px] w-full rounded-xl border border-outline-variant bg-surface px-1"
+                />
+              </Field>
+            </div>
+            <button
+              type="submit"
+              disabled={busy || !name.trim()}
+              className="rounded-full bg-primary-container px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40"
+            >
+              Tambah Client
+            </button>
+          </form>
+
+          {error && <p className="mb-3 text-sm text-red-500">{error}</p>}
+
+          {orgs.length === 0 ? (
+            <p className="text-sm text-text-secondary">
+              Belum ada client. Tambahkan satu untuk mulai menandai peserta
+              program B2B.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {orgs.map((o) => (
+                <li
+                  key={o.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-stroke-subtle px-3 py-2"
+                >
+                  <span className="flex items-center gap-2">
+                    <ClientPill name={o.name} color={o.accent_color} />
+                    <span className="text-xs text-text-secondary">
+                      {o.member_count} user
+                      {o.active ? "" : " • nonaktif"}
+                    </span>
+                  </span>
+                  <span className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => rename(o)}
+                      disabled={busy}
+                      className="rounded-full border border-stroke-subtle px-3 py-1 text-xs font-semibold text-primary hover:bg-surface-container disabled:opacity-40"
+                    >
+                      Rename
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => send("PATCH", { id: o.id, active: !o.active })}
+                      disabled={busy}
+                      className="rounded-full border border-stroke-subtle px-3 py-1 text-xs font-semibold text-primary hover:bg-surface-container disabled:opacity-40"
+                    >
+                      {o.active ? "Nonaktifkan" : "Aktifkan"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => remove(o)}
+                      disabled={busy}
+                      className="rounded-full border border-red-300 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40"
+                    >
+                      Hapus
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type ModalState =
   | { kind: "add" }
   | { kind: "edit"; user: UserItem }
   | { kind: "password"; user: UserItem }
+  | { kind: "client"; users: UserItem[] }
   | null;
 
 // Combined user management: CRUD (add/edit/delete + password reset) merged
@@ -695,12 +1042,23 @@ function UserManagementSection() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [modal, setModal] = useState<ModalState>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const { orgs, reload: reloadOrgs } = useClientOrgs();
 
   const load = useCallback(async () => {
     const res = await fetch("/api/analyst/users", { cache: "no-store" });
     if (!res.ok) return;
     const json = await res.json();
-    setItems(json.items ?? []);
+    const next: UserItem[] = json.items ?? [];
+    setItems(next);
+    // Drop ids that no longer exist (deleted here or elsewhere) so the
+    // selection count can never claim more than the table shows.
+    setSelected((prev) => {
+      const live = new Set(next.map((u) => u.id));
+      const kept = new Set([...prev].filter((id) => live.has(id)));
+      return kept.size === prev.size ? prev : kept;
+    });
   }, []);
 
   useEffect(() => {
@@ -780,6 +1138,65 @@ function UserManagementSection() {
     }
   }
 
+  // Bulk actions. Each one reloads afterwards, so the table and the selection
+  // can never drift out of step with the server.
+  async function bulkSubscription(
+    action: "activate" | "deactivate" | "reset_trial" | "extend_trial",
+    confirmMessage?: string,
+  ) {
+    const userIds = [...selected];
+    if (!userIds.length) return;
+    if (confirmMessage && !window.confirm(confirmMessage)) return;
+    setBulkBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/analyst/subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds, action }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setError(json.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      await load();
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  async function bulkDelete() {
+    const userIds = [...selected];
+    if (!userIds.length) return;
+    // A typed count rather than a plain confirm: this deletes accounts and
+    // everything hanging off them, and a stray Enter should not be enough.
+    const answer = window.prompt(
+      `Hapus ${userIds.length} akun secara permanen?\n\nKetik angka ${userIds.length} untuk konfirmasi.`,
+    );
+    if (answer?.trim() !== String(userIds.length)) return;
+    setBulkBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/analyst/users", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      if (json.failed?.length) {
+        setError(`${json.deleted} terhapus, ${json.failed.length} gagal.`);
+      }
+      await load();
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   const q = query.trim().toLowerCase();
   const filtered = q
     ? items.filter(
@@ -791,6 +1208,29 @@ function UserManagementSection() {
   const premiumCount = items.filter(
     (u) => u.subscription_tier === "premium",
   ).length;
+  const orgColors = new Map(orgs.map((o) => [o.id, o.accent_color]));
+  // "Select all" applies to what is on screen, not the whole table: ticking a
+  // box while a search is active must never quietly select filtered-out users.
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((u) => selected.has(u.id));
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllFiltered() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) for (const u of filtered) next.delete(u.id);
+      else for (const u of filtered) next.add(u.id);
+      return next;
+    });
+  }
 
   return (
     <section>
@@ -812,6 +1252,12 @@ function UserManagementSection() {
           Tambah User
         </button>
       </div>
+      <ClientOrganizationsSection
+        orgs={orgs}
+        reload={reloadOrgs}
+        onChanged={load}
+      />
+
       <div className="rounded-2xl border border-stroke-subtle bg-surface-card shadow-soft">
         <div className="flex flex-wrap items-center gap-3 border-b border-stroke-subtle p-3">
           <input
@@ -823,20 +1269,121 @@ function UserManagementSection() {
           />
           {error && <p className="text-sm text-red-500">{error}</p>}
         </div>
+
+        {selected.size > 0 && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-stroke-subtle bg-secondary-container/10 p-3">
+            <span className="mr-1 text-sm font-semibold text-primary">
+              {selected.size} user dipilih
+            </span>
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() =>
+                setModal({
+                  kind: "client",
+                  users: items.filter((u) => selected.has(u.id)),
+                })
+              }
+              className="rounded-full bg-primary-container px-3 py-1 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-40"
+            >
+              Set Client
+            </button>
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => bulkSubscription("activate")}
+              className="rounded-full border border-green-300 px-3 py-1 text-xs font-semibold text-green-700 hover:bg-green-50 disabled:opacity-40"
+            >
+              Aktifkan (30 hari)
+            </button>
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() =>
+                bulkSubscription(
+                  "deactivate",
+                  `Nonaktifkan langganan ${selected.size} user?`,
+                )
+              }
+              className="rounded-full border border-red-300 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40"
+            >
+              Nonaktifkan
+            </button>
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => bulkSubscription("extend_trial")}
+              className="rounded-full border border-blue-300 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-40"
+            >
+              +7 Hari Trial
+            </button>
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => bulkSubscription("reset_trial")}
+              className="rounded-full border border-blue-300 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-40"
+            >
+              Reset Trial
+            </button>
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={bulkDelete}
+              className="rounded-full border border-red-400 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-40"
+            >
+              Hapus
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="ml-auto text-xs font-semibold text-text-secondary hover:text-on-surface"
+            >
+              Batal pilih
+            </button>
+          </div>
+        )}
         <div className="max-h-[32rem] overflow-auto">
           <table className="w-full text-left text-sm">
             <thead className="sticky top-0 border-b border-stroke-subtle bg-surface-card text-xs text-text-secondary">
               <tr>
-                {["user", "status", "berlaku s.d.", "daftar", "aksi"].map((h) => (
-                  <th key={h} className="px-3 py-2 font-semibold">
-                    {h}
-                  </th>
-                ))}
+                <th className="w-10 px-3 py-2">
+                  <input
+                    type="checkbox"
+                    checked={allFilteredSelected}
+                    onChange={toggleAllFiltered}
+                    disabled={filtered.length === 0}
+                    aria-label="Pilih semua user yang tampil"
+                    className="h-4 w-4 cursor-pointer accent-[#00629d]"
+                  />
+                </th>
+                {["user", "client", "status", "berlaku s.d.", "daftar", "aksi"].map(
+                  (h) => (
+                    <th key={h} className="px-3 py-2 font-semibold">
+                      {h}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody>
               {filtered.map((u) => (
-                <tr key={u.id} className="border-b border-stroke-subtle/50">
+                <tr
+                  key={u.id}
+                  className={
+                    selected.has(u.id)
+                      ? "border-b border-stroke-subtle/50 bg-secondary-container/10"
+                      : "border-b border-stroke-subtle/50"
+                  }
+                >
+                  <td className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(u.id)}
+                      onChange={() => toggleOne(u.id)}
+                      aria-label={`Pilih ${u.email}`}
+                      className="h-4 w-4 cursor-pointer accent-[#00629d]"
+                    />
+                  </td>
                   <td className="px-3 py-2">
                     <p className="font-semibold text-primary">
                       {u.full_name ?? "(tanpa nama)"}
@@ -844,6 +1391,19 @@ function UserManagementSection() {
                     <p className="font-mono text-xs text-text-secondary">
                       {u.email}
                     </p>
+                  </td>
+                  <td className="px-3 py-2">
+                    {u.client_org_name ? (
+                      <ClientPill
+                        name={u.client_org_name}
+                        color={
+                          (u.client_org_id && orgColors.get(u.client_org_id)) ||
+                          "#00629d"
+                        }
+                      />
+                    ) : (
+                      <span className="text-xs text-text-secondary">Publik</span>
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     <span
@@ -925,6 +1485,12 @@ function UserManagementSection() {
                         </button>
                       )}
                       <button
+                        onClick={() => setModal({ kind: "client", users: [u] })}
+                        className="rounded-full border border-stroke-subtle px-3 py-1 text-xs font-semibold text-primary hover:bg-surface-container"
+                      >
+                        Client
+                      </button>
+                      <button
                         onClick={() => setModal({ kind: "edit", user: u })}
                         className="rounded-full border border-stroke-subtle px-3 py-1 text-xs font-semibold text-primary hover:bg-surface-container"
                       >
@@ -950,7 +1516,7 @@ function UserManagementSection() {
               {!filtered.length && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={7}
                     className="px-3 py-4 text-center text-text-secondary"
                   >
                     {items.length ? "Tidak ada yang cocok." : "Belum ada user."}
@@ -977,6 +1543,17 @@ function UserManagementSection() {
           user={modal.user}
           onClose={() => setModal(null)}
           onSaved={load}
+        />
+      )}
+      {modal?.kind === "client" && (
+        <SetClientModal
+          users={modal.users}
+          orgs={orgs}
+          onClose={() => setModal(null)}
+          onSaved={async () => {
+            await load();
+            await reloadOrgs();
+          }}
         />
       )}
     </section>

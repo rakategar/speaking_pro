@@ -5,6 +5,7 @@ import { TrendChart } from "@/components/report/TrendChart";
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import { TopAppBar } from "@/components/layout/TopAppBar";
 import { BlurredPremiumSection } from "@/components/report/BlurredPremiumSection";
+import { AudioPlayer } from "@/components/report/AudioPlayer";
 import { FaisalAvatar, type FaisalExpression } from "@/components/ui/FaisalAvatar";
 import type { Insight } from "@/lib/hf/scoring-llm";
 
@@ -36,7 +37,7 @@ export default async function ReportPage({
       supabase
         .from("reports")
         .select(
-          "*, recordings!reports_recording_id_fkey(environment, created_at, duration_seconds), next_module:practice_modules!reports_next_step_module_id_fkey(slug, title, category)",
+          "*, recordings!reports_recording_id_fkey(environment, created_at, duration_seconds, storage_path), next_module:practice_modules!reports_next_step_module_id_fkey(slug, title, category)",
         )
         .eq("recording_id", recordingId)
         .maybeSingle(),
@@ -129,6 +130,16 @@ export default async function ReportPage({
             )}
           </div>
         </div>
+
+        {/* The recording is the user's own, so it sits outside the premium
+            gate -- there is nothing to upsell about hearing yourself back.
+            Drill rows carry no audio and render nothing. */}
+        {report.recordings?.storage_path && (
+          <AudioPlayer
+            recordingId={recordingId}
+            durationSeconds={report.recordings?.duration_seconds}
+          />
+        )}
 
         <BlurredPremiumSection active={!isPremium}>
         <div className="grid grid-cols-2 gap-bento-gap">

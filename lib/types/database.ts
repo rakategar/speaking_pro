@@ -137,6 +137,7 @@ export type Database = {
           status: string
           redeemed_by: string | null
           redeemed_at: string | null
+          client_org_id: string | null
           created_at: string
         }
         Insert: {
@@ -147,6 +148,7 @@ export type Database = {
           status?: string
           redeemed_by?: string | null
           redeemed_at?: string | null
+          client_org_id?: string | null
           created_at?: string
         }
         Update: {
@@ -157,6 +159,42 @@ export type Database = {
           status?: string
           redeemed_by?: string | null
           redeemed_at?: string | null
+          client_org_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redeem_tickets_client_org_id_fkey"
+            columns: ["client_org_id"]
+            isOneToOne: false
+            referencedRelation: "client_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_organizations: {
+        Row: {
+          id: string
+          name: string
+          short_name: string | null
+          accent_color: string
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          short_name?: string | null
+          accent_color?: string
+          active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          short_name?: string | null
+          accent_color?: string
+          active?: boolean
           created_at?: string
         }
         Relationships: []
@@ -418,6 +456,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          client_org_id: string | null
           created_at: string
           full_name: string | null
           id: string
@@ -441,6 +480,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          client_org_id?: string | null
           created_at?: string
           full_name?: string | null
           id: string
@@ -464,6 +504,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          client_org_id?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
@@ -485,7 +526,15 @@ export type Database = {
           trial_started_at?: string | null
           tutorial_completed?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_client_org_id_fkey"
+            columns: ["client_org_id"]
+            isOneToOne: false
+            referencedRelation: "client_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       weekly_summaries: {
         Row: {

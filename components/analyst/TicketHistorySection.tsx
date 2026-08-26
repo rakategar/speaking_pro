@@ -12,6 +12,7 @@ type Ticket = {
   created_at: string;
   redeemed_by_name: string | null;
   redeemed_by_email: string | null;
+  client_org_name: string | null;
 };
 
 const STATUS_META: Record<string, { label: string; className: string }> = {
@@ -104,7 +105,15 @@ export function TicketHistorySection({ reloadKey }: { reloadKey?: number }) {
           <table className="w-full text-left text-sm">
             <thead className="sticky top-0 border-b border-stroke-subtle bg-surface-card text-xs text-text-secondary">
               <tr>
-                {["kode", "batch", "durasi", "status", "penukar", "dibuat"].map(
+                {[
+                  "kode",
+                  "batch",
+                  "client",
+                  "durasi",
+                  "status",
+                  "penukar",
+                  "dibuat",
+                ].map(
                   (h) => (
                     <th key={h} className="px-3 py-2 font-semibold">
                       {h}
@@ -123,6 +132,9 @@ export function TicketHistorySection({ reloadKey }: { reloadKey?: number }) {
                     </td>
                     <td className="px-3 py-2 text-text-secondary">
                       {t.batch_label ?? "-"}
+                    </td>
+                    <td className="px-3 py-2 text-text-secondary">
+                      {t.client_org_name ?? "-"}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-text-secondary">
                       {t.duration_days} hari
@@ -162,7 +174,7 @@ export function TicketHistorySection({ reloadKey }: { reloadKey?: number }) {
               {!filtered.length && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-3 py-4 text-center text-text-secondary"
                   >
                     {items.length

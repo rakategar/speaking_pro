@@ -11,6 +11,13 @@ export const runtime = "nodejs";
 
 // GET /api/analyst/subscriptions -- every user with their subscription
 // state; POST toggles it. Both behind the analyst password cookie.
+//
+// POST takes either {userId} or {userIds} for the bulk selection in the user
+// management tab. The per-user logic is identical either way -- bulk just
+// loops -- so there is only one code path to reason about.
+
+const MAX_BULK = 500;
+
 export async function GET(request: NextRequest) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -27,7 +34,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const body = await request.json().catch(() => ({}));
-  const userId = typeof body.userId === "string" ? body.userId : "";
+  const userIds: string[] = Array.isArray(body.userIds)
+    ? body.userIds
+        .filter((id: unknown): id is string => typeof id === "string" && id.length > 0)
+        .slice(0, MAX_BULK)
+    : typeof body.userId === "string" && body.userId
+      ? [body.userId]
+      : [];
   const ACTIONS = ["activate", "deactivate", "reset_trial", "extend_trial"] as const;
   const action = ACTIONS.includes(body.action) ? body.action : "";
   const days =
@@ -36,7 +49,7 @@ export async function POST(request: NextRequest) {
       : action === "extend_trial"
         ? 7
         : 30;
-  if (!userId || !action) {
+  if (userIds.length === 0 || !action) {
     return NextResponse.json(
       {
         error:
@@ -48,13 +61,19 @@ export async function POST(request: NextRequest) {
 
   if (action === "activate") {
     // Uses the shared helper (sets subscription_started_at once, never on
-    // re-activation) instead of the generic `update` object below.
-    await activatePremium(
-      createServiceRoleClient(),
-      userId,
-      new Date(Date.now() + days * 24 * 60 * 60 * 1000),
-    );
-    return NextResponse.json({ ok: true });
+    // re-activation) instead of the generic `update` object below. Sequential
+    // because each call also sends an activation email.
+    const supabase = createServiceRoleClient();
+    const renewsAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    const failed: string[] = [];
+    for (const id of userIds) {
+      try {
+        await activatePremium(supabase, id, renewsAt);
+      } catch {
+        failed.push(id);
+      }
+    }
+    return NextResponse.json({ ok: failed.length === 0, activated: userIds.length - failed.length, failed });
   }
 
   let update: ProfileUpdate;
@@ -77,7 +96,7 @@ export async function POST(request: NextRequest) {
   const { error } = await createServiceRoleClient()
     .from("profiles")
     .update(update)
-    .eq("id", userId);
+    .in("id", userIds);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
