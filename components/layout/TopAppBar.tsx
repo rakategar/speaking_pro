@@ -4,6 +4,7 @@ import Link from "next/link";
 import { LogoHorizontal } from "@/components/ui/LogoHorizontal";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import { LeaderboardButton } from "@/components/layout/LeaderboardButton";
 import { useGoBack } from "@/components/ui/useGoBack";
 import { cn } from "@/lib/utils";
 
@@ -27,9 +28,9 @@ type TopAppBarProps = {
 /**
  * One fixed/blurred bar shape reused across every screen; only the
  * left/center content differs per mockup:
- *  - "home": avatar + greeting title + notification bell (Dashboard, Rapor)
- *  - "back": back button + left-aligned title + notification bell (AIUEO, Account, Pro Shop)
- *  - "transactional": back button + centered title + spacer, no bell (Checkout)
+ *  - "home": avatar + greeting title + trophy/bell (Dashboard, Rapor)
+ *  - "back": back button + left-aligned title + trophy/bell (AIUEO, Account, Pro Shop)
+ *  - "transactional": back button + centered title + spacer, no actions (Checkout)
  */
 export function TopAppBar({
   variant,
@@ -123,7 +124,10 @@ export function TopAppBar({
           // -ml-10 pulls the title box back over the 40px back button to
           // optically centre it; without pointer-events-none this later
           // sibling wins hit-testing and swallows clicks on the arrow.
-          <h1 className="font-title-lg text-title-lg text-primary flex-1 text-center -ml-10 pointer-events-none">
+          // -mr-10 is the mirror of that for the trophy that now sits beside
+          // the bell: the action group grew by one 40px button, so without it
+          // the flex-1 title box would drift left of where it used to sit.
+          <h1 className="font-title-lg text-title-lg text-primary flex-1 text-center -ml-10 -mr-10 pointer-events-none">
             {title}
           </h1>
         ) : null}
@@ -131,7 +135,10 @@ export function TopAppBar({
         {variant === "transactional" ? (
           <div className="w-10" />
         ) : (
-          <NotificationBell />
+          <div className="flex items-center gap-0.5">
+            <LeaderboardButton />
+            <NotificationBell />
+          </div>
         )}
       </div>
     </header>

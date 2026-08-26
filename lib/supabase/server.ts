@@ -1,18 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/types/database";
+import { SUPABASE_AUTH_COOKIE_NAME } from "@/lib/supabase/config";
 
 // NEXT_PUBLIC_SUPABASE_URL resolves to this box's own public IP, so every
 // server-side call hairpins out through NAT and back in through nginx -> Kong
 // (~4x slower than reaching Kong directly). Talking to Kong internally avoids
-// that, but ONLY for clients that don't touch auth cookies:
-//
-// supabase-js derives the auth cookie name from the hostname
-// (`sb-${hostname.split(".")[0]}-auth-token`). An internal URL yields
-// `sb-127-auth-token` while the browser writes `sb-speakingpro-auth-token`, so
-// a cookie-bearing client would never find the session and would bounce every
-// request to /login. createClient() below therefore stays on the public URL;
-// only the cookie-less service-role client uses the internal one.
+// that; the cookie-less service-role client uses it.
 //
 // Service-role storage paths must build browser-facing URLs with
 // publicStorageUrl() (lib/supabase/storage.ts), never getPublicUrl().
@@ -28,6 +22,7 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
+      cookieOptions: { name: SUPABASE_AUTH_COOKIE_NAME },
       cookies: {
         getAll() {
           return cookieStore.getAll();

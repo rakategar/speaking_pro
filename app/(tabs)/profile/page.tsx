@@ -12,17 +12,9 @@ import {
   getRecordingQuota,
   TOPUP_BLOCK_SECONDS,
 } from "@/lib/recording/quota";
-import { formatRupiah } from "@/lib/format";
+import { formatRupiah, speakingLevel } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-
-function speakingLevel(avg: number | null): string {
-  if (avg === null) return "Pemula";
-  if (avg >= 85) return "Advanced Pro";
-  if (avg >= 70) return "Intermediate Pro";
-  if (avg >= 50) return "Rising Speaker";
-  return "Pemula";
-}
 
 function dayKey(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -205,6 +197,13 @@ export default async function ProfilePage() {
       title: "Ringkasan Mingguan",
       subtitle: "Unduh laporan mingguan Anda",
       toneAqua: false,
+    },
+    {
+      href: "/leaderboard",
+      icon: "trophy",
+      title: "Leaderboard",
+      subtitle: "Peringkat poin semua peserta",
+      toneAqua: true,
     },
   ];
 

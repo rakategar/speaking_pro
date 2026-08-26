@@ -761,6 +761,19 @@ export type Database = {
         Args: { p_user_id: string; p_seconds: number }
         Returns: number
       }
+      leaderboard: {
+        Args: { p_limit?: number }
+        Returns: {
+          rank: number
+          user_id: string
+          full_name: string | null
+          avatar_url: string | null
+          points: number
+          session_count: number
+          drill_count: number
+          best_score: number | null
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

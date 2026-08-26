@@ -8,8 +8,16 @@ const nextConfig: NextConfig = {
   images: {
     // Product images on the Pro Shop cards (components/shop/ShopCardImage)
     // can point at Supabase Storage, which next/image refuses to load unless
-    // the host is listed here. Host matches NEXT_PUBLIC_SUPABASE_URL.
+    // the host is listed here. app.speakingpro.online is the current
+    // NEXT_PUBLIC_SUPABASE_URL; the bare apex stays listed because URLs built
+    // before the switch are already persisted in columns like
+    // profiles.avatar_url and both hosts still proxy to the same Kong.
     remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "app.speakingpro.online",
+        pathname: "/storage/v1/object/public/**",
+      },
       {
         protocol: "https",
         hostname: "speakingpro.online",

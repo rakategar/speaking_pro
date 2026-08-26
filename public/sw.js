@@ -1,7 +1,7 @@
 // Speaking Pro service worker: web push notifications for finished analyses
 // + PWA asset caching with an elegant offline fallback.
 
-const STATIC_CACHE = "sp-static-v2";
+const STATIC_CACHE = "sp-static-v3";
 
 const OFFLINE_HTML = `<!doctype html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { SUPABASE_AUTH_COOKIE_NAME } from "@/lib/supabase/config";
 
 // Paths reachable without a session. /analyst has its own password gate;
 // manifest + service worker must be public or the PWA install breaks.
@@ -52,15 +53,10 @@ export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    // MUST stay the public URL: supabase-js derives the auth cookie name from
-    // the hostname (`sb-${hostname.split(".")[0]}-auth-token`), so pointing
-    // this at internal Kong looks for `sb-127-auth-token` while the browser
-    // wrote `sb-speakingpro-auth-token` -- the session is never found and
-    // every request bounces to /login. Only cookie-less clients
-    // (createServiceRoleClient) may use SUPABASE_INTERNAL_URL.
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
+      cookieOptions: { name: SUPABASE_AUTH_COOKIE_NAME },
       cookies: {
         getAll() {
           return request.cookies.getAll();
