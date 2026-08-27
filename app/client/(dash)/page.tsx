@@ -3,18 +3,14 @@ import { redirect } from "next/navigation";
 import { readClientSession } from "@/lib/client/session";
 import { analyseCohort } from "@/lib/client/insights";
 import { speakingLevel } from "@/lib/format";
+import { readPeriodFromParams } from "@/lib/client/period";
 import { PeriodPicker } from "@/components/client/PeriodPicker";
+import { PeriodError } from "@/components/client/PeriodError";
+import { AutoRefresh } from "@/components/client/AutoRefresh";
 import { Stat } from "@/components/client/Stat";
 import { ActivityBars } from "@/components/client/ActivityBars";
 
 export const dynamic = "force-dynamic";
-
-const ALLOWED_DAYS = [7, 30, 90];
-
-function readDays(raw: string | string[] | undefined): number {
-  const n = Number(Array.isArray(raw) ? raw[0] : raw);
-  return ALLOWED_DAYS.includes(n) ? n : 30;
-}
 
 const round1 = (v: number | null) =>
   v == null ? "–" : (Math.round(v * 10) / 10).toLocaleString("id-ID");
@@ -41,8 +37,8 @@ export default async function ClientOverviewPage({
   const session = await readClientSession();
   if (!session) redirect("/client/login");
 
-  const days = readDays((await searchParams).days);
-  const { overview, risky, forecast } = await analyseCohort(session.orgId, days);
+  const { period, error: periodError } = readPeriodFromParams(await searchParams);
+  const { overview, risky, forecast } = await analyseCohort(session.orgId, period);
   const avg = overview.averages;
   const prev = overview.previousAverages;
 
@@ -52,11 +48,14 @@ export default async function ClientOverviewPage({
         <div>
           <h1 className="text-2xl font-extrabold text-primary">Ringkasan Program</h1>
           <p className="text-sm text-text-secondary">
-            Perkembangan {overview.participants} peserta selama {days} hari terakhir.
+            Perkembangan {overview.participants} peserta selama periode {period.label}.
           </p>
         </div>
-        <PeriodPicker days={days} />
+        <PeriodPicker period={period} />
       </div>
+
+      <PeriodError message={periodError} />
+      <AutoRefresh renderedAt={new Date().toISOString()} />
 
       {overview.participants === 0 ? (
         <div className="rounded-2xl border border-stroke-subtle bg-surface-card p-8 text-center shadow-soft">

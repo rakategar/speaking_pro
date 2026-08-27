@@ -7,18 +7,12 @@ import {
   renderCohortReport,
   renderParticipantReport,
 } from "@/lib/client/reportPdf";
+import { PERIOD_ERROR_MESSAGE, isPeriodError, readPeriod } from "@/lib/client/period";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-const ALLOWED_DAYS = [7, 30, 90];
-const DAY_MS = 86_400_000;
 const FORECAST_HORIZON_DAYS = 30;
-
-function readDays(raw: string | null): number {
-  const n = Number(raw);
-  return ALLOWED_DAYS.includes(n) ? n : 30;
-}
 
 // Slugified so the filename is safe on every OS the client might save it to.
 function slug(value: string): string {
@@ -31,7 +25,8 @@ function slug(value: string): string {
   );
 }
 
-// GET /api/client/reports?days=30[&userId=...] -- streams a PDF.
+// GET /api/client/reports?days=30 (or ?from=YYYY-MM-DD&to=YYYY-MM-DD)
+// [&userId=...] -- streams a PDF.
 //
 // Rendered on demand and never written to Storage: no extra bucket, no extra
 // policy, and no stale file still readable after the organization is deleted.
@@ -40,15 +35,28 @@ export async function GET(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const url = new URL(request.url);
-  const days = readDays(url.searchParams.get("days"));
-  const userId = url.searchParams.get("userId");
   const now = new Date();
-  const periodStart = new Date(now.getTime() - days * DAY_MS);
+  const period = readPeriod(url.searchParams, now);
+  if (isPeriodError(period)) {
+    return NextResponse.json(
+      { error: PERIOD_ERROR_MESSAGE[period.error] },
+      { status: 400 },
+    );
+  }
+  const userId = url.searchParams.get("userId");
+  const days = period.days;
+  const periodStart = period.start;
+  // The window's end is exclusive (Jakarta midnight of the day after `to`).
+  // Printing that verbatim would tell the client their August report covers
+  // 1 September, so the PDF gets the last instant that is actually inside.
+  const periodEnd = new Date(period.end.getTime() - 1);
+  // Filenames say which window they cover, so two downloads never look alike.
+  const periodSlug = period.preset ? `${days}h` : `${period.from}_${period.to}`;
 
   if (userId) {
     // participantDetail returns null for anyone outside this organization --
     // the membership check lives there, not here.
-    const detail = await participantDetail(session.orgId, userId, days, now);
+    const detail = await participantDetail(session.orgId, userId, period, now);
     if (!detail) {
       return NextResponse.json({ error: "Tidak ditemukan" }, { status: 404 });
     }
@@ -58,7 +66,7 @@ export async function GET(request: NextRequest) {
       participant: detail.row,
       periodDays: days,
       periodStart,
-      periodEnd: now,
+      periodEnd,
       averages: detail.averages,
       previousAverages: detail.previousAverages,
       points: detail.points,
@@ -68,15 +76,15 @@ export async function GET(request: NextRequest) {
     return new NextResponse(new Uint8Array(buffer), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="rekap-${slug(detail.row.name ?? detail.row.email)}-${days}h.pdf"`,
+        "Content-Disposition": `attachment; filename="rekap-${slug(detail.row.name ?? detail.row.email)}-${periodSlug}.pdf"`,
       },
     });
   }
 
-  const analysis = await analyseCohort(session.orgId, days, now);
+  const analysis = await analyseCohort(session.orgId, period, now);
   // Cache-only: a download must never trigger a paid model call. The client
   // asks for fresh prose explicitly, on the insights page.
-  const { narrative } = await getCohortNarrative(session.orgId, days, analysis, {
+  const { narrative } = await getCohortNarrative(session.orgId, period, analysis, {
     cacheOnly: true,
   }).catch(() => ({ narrative: null }));
 
@@ -84,7 +92,7 @@ export async function GET(request: NextRequest) {
     orgName: session.orgName,
     periodDays: days,
     periodStart,
-    periodEnd: now,
+    periodEnd,
     participants: analysis.participants,
     totals: {
       participants: analysis.overview.participants,
@@ -104,7 +112,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="rekap-program-${slug(session.orgName)}-${days}h.pdf"`,
+      "Content-Disposition": `attachment; filename="rekap-program-${slug(session.orgName)}-${periodSlug}.pdf"`,
     },
   });
 }

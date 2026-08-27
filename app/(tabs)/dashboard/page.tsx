@@ -14,6 +14,10 @@ import { TrialNudgeGate } from "@/components/trial/TrialNudgeGate";
 import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
 import { FaisalAvatar } from "@/components/ui/FaisalAvatar";
 import { TopAppBar } from "@/components/layout/TopAppBar";
+import {
+  LeaderboardTeaser,
+  type LeaderboardRow,
+} from "@/components/leaderboard/LeaderboardTeaser";
 
 export const dynamic = "force-dynamic";
 
@@ -58,9 +62,9 @@ export default async function DashboardPage() {
     { data: profile },
     { data: weekRecordings },
     { data: history },
-    { data: latestAnalyzed },
     { data: latestReport },
     { data: todayDrills },
+    { data: board },
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -79,13 +83,6 @@ export default async function DashboardPage() {
       .gte("recorded_at", monthStart.toISOString())
       .order("recorded_at", { ascending: true }),
     supabase
-      .from("recordings")
-      .select("id")
-      .eq("status", "analyzed")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
       .from("reports")
       .select(
         "confidence_score, clarity_score, structure_score, intonation_score, wpm, filler_word_count",
@@ -98,9 +95,22 @@ export default async function DashboardPage() {
       .select("duration_seconds")
       .eq("status", "drill_completed")
       .gte("created_at", todayStart.toISOString()),
+    // public.leaderboard is SECURITY DEFINER and returns nothing but name,
+    // avatar and points -- see the 20260825 migration and /leaderboard.
+    supabase.rpc("leaderboard", { p_limit: 100 }),
   ]);
 
   const name = profile?.full_name ?? user.email?.split("@")[0] ?? "Speaker";
+
+  const leaderboardRows: LeaderboardRow[] = ((board as LeaderboardRow[] | null) ?? []).map(
+    (r) => ({
+      ...r,
+      rank: Number(r.rank),
+      points: Number(r.points),
+      session_count: Number(r.session_count),
+      drill_count: Number(r.drill_count),
+    }),
+  );
 
   const isFreeTrial = profile?.subscription_tier !== "premium";
   const trialDay = profile?.trial_started_at
@@ -382,9 +392,13 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {/* Progress Snap */}
+        {/* Leaderboard teaser */}
+        <LeaderboardTeaser rows={leaderboardRows} userId={user.id} />
+
+        {/* Progress Snap -- the whole journey, not the latest recording. The
+            per-session report is still one tap away in /history. */}
         <Link
-          href={latestAnalyzed ? `/report/${latestAnalyzed.id}` : "/record"}
+          href="/progress"
           data-tutorial="progress-snap"
           className="bg-surface-container-lowest border border-stroke-subtle bento-card rounded-3xl p-6 flex items-center justify-between py-8 active:scale-[0.99] transition-transform"
         >

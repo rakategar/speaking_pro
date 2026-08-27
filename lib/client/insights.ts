@@ -8,6 +8,7 @@ import {
   type ParticipantRow,
 } from "@/lib/client/analytics";
 import { forecastScores, riskFlags, type Forecast } from "@/lib/client/forecast";
+import { periodKey, type Period } from "@/lib/client/period";
 import {
   writeCohortNarrative,
   type CohortNarrative,
@@ -22,6 +23,7 @@ const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const REGENERATE_COOLDOWN_MS = 60 * 60 * 1000;
 
 export type CohortFacts = {
+  periode: string;
   periode_hari: number;
   jumlah_peserta: number;
   peserta_aktif: number;
@@ -49,13 +51,13 @@ export type CohortAnalysis = {
 /** Everything the dashboard, the PDF and the AI all read from. */
 export async function analyseCohort(
   orgId: string,
-  days: number,
+  period: Period,
   now = new Date(),
 ): Promise<CohortAnalysis> {
   const [overview, participants, points] = await Promise.all([
-    orgOverview(orgId, days, now),
-    listParticipants(orgId, days, now),
-    orgSessionPoints(orgId, days, now),
+    orgOverview(orgId, period),
+    listParticipants(orgId, period, now),
+    orgSessionPoints(orgId, period),
   ]);
 
   const forecast = forecastScores(points, FORECAST_HORIZON_DAYS, now);
@@ -71,7 +73,8 @@ export async function analyseCohort(
   const label = (p: ParticipantRow) => p.name ?? p.email;
 
   const facts: CohortFacts = {
-    periode_hari: days,
+    periode: period.label,
+    periode_hari: period.days,
     jumlah_peserta: overview.participants,
     peserta_aktif: overview.activeParticipants,
     peserta_tidak_aktif: participants.filter((p) => p.status === "tidak aktif").length,
@@ -131,7 +134,7 @@ export type CachedNarrative = {
  */
 export async function getCohortNarrative(
   orgId: string,
-  days: number,
+  period: Period,
   analysis: CohortAnalysis,
   options: { force?: boolean; cacheOnly?: boolean } = {},
 ): Promise<CachedNarrative> {
@@ -141,7 +144,7 @@ export async function getCohortNarrative(
     .from("client_ai_reports")
     .select("payload, facts_hash, created_at")
     .eq("client_org_id", orgId)
-    .eq("period_days", days)
+    .eq("period_key", periodKey(period))
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -181,7 +184,8 @@ export async function getCohortNarrative(
     const createdAt = new Date().toISOString();
     await supabase.from("client_ai_reports").insert({
       client_org_id: orgId,
-      period_days: days,
+      period_days: period.days,
+      period_key: periodKey(period),
       payload: narrative,
       facts_hash: analysis.factsHash,
       created_at: createdAt,

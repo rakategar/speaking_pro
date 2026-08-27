@@ -1,20 +1,16 @@
 import { redirect } from "next/navigation";
 import { readClientSession } from "@/lib/client/session";
 import { listParticipants } from "@/lib/client/analytics";
+import { periodFromDays } from "@/lib/client/period";
+import { ReportRangePicker } from "@/components/client/ReportRangePicker";
 
 export const dynamic = "force-dynamic";
-
-const PERIODS = [
-  { days: 7, label: "7 hari terakhir" },
-  { days: 30, label: "30 hari terakhir" },
-  { days: 90, label: "90 hari terakhir" },
-];
 
 export default async function ReportsPage() {
   const session = await readClientSession();
   if (!session) redirect("/client/login");
 
-  const participants = await listParticipants(session.orgId, 30);
+  const participants = await listParticipants(session.orgId, periodFromDays(30));
 
   return (
     <div className="space-y-6">
@@ -36,16 +32,8 @@ export default async function ReportsPage() {
           {participants.length} peserta, dan analisis naratif terakhir bila sudah
           pernah dibuat di halaman Analitik AI.
         </p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          {PERIODS.map((p) => (
-            <a
-              key={p.days}
-              href={`/api/client/reports?days=${p.days}`}
-              className="rounded-full bg-primary-container px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-            >
-              Unduh {p.label}
-            </a>
-          ))}
+        <div className="mt-4">
+          <ReportRangePicker />
         </div>
       </section>
 

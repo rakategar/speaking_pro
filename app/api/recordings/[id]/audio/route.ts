@@ -3,8 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
-// GET /api/recordings/[id]/audio -- streams the caller's own studio recording
-// back for playback on the analysis result page.
+// GET /api/recordings/[id]/audio[?download=1] -- streams the caller's own
+// studio recording back: inline for playback on the analysis result page, or
+// as an attachment when the user asks to keep a copy.
 //
 // A proxy rather than a signed URL: the "recordings" bucket is private, and
 // server-side Supabase traffic goes to SUPABASE_INTERNAL_URL, so a signed URL
@@ -51,6 +52,17 @@ function parseRange(
   return { start, end: Math.min(end, size - 1) };
 }
 
+/** Safe on every OS the user might save this to. */
+function slugify(value: string): string {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 40) || "rekaman"
+  );
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -69,7 +81,7 @@ export async function GET(
   // away -- same belt-and-braces as the summary download route.
   const { data: recording } = await supabase
     .from("recordings")
-    .select("storage_path")
+    .select("storage_path, created_at, practice_modules(title)")
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -98,16 +110,27 @@ export async function GET(
 
   // Buffering the whole object is fine here: the bucket caps uploads at 25MB
   // and recordings are at most ~5 minutes.
+  const download = new URL(request.url).searchParams.get("download") === "1";
+  const moduleTitle =
+    (recording.practice_modules as { title: string } | null)?.title ?? "rekaman-latihan";
+  const dateKey = new Date(recording.created_at).toISOString().slice(0, 10);
+  const filename = `${slugify(moduleTitle)}-${dateKey}.${ext || "webm"}`;
+
   const headers: Record<string, string> = {
     "Content-Type": contentType,
-    "Content-Disposition": "inline",
+    "Content-Disposition": download
+      ? `attachment; filename="${filename}"`
+      : "inline",
     "Accept-Ranges": "bytes",
     // Private: this is one user's own audio and must never land in a shared
     // cache. The short max-age keeps scrubbing from re-fetching the file.
     "Cache-Control": "private, max-age=3600",
   };
 
-  const rangeHeader = request.headers.get("range");
+  // A download wants the whole file in one response. Range still matters on
+  // the playback path -- a server that answers 200-with-everything there makes
+  // seeking fail outright in Safari.
+  const rangeHeader = download ? null : request.headers.get("range");
   if (rangeHeader) {
     const range = parseRange(rangeHeader, size);
     if (range === "invalid") {

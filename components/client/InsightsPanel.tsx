@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { CohortNarrative } from "@/lib/gemini/cohort-narrative";
 import type { Forecast } from "@/lib/client/forecast";
+import { periodQuery, type Period } from "@/lib/client/period";
 
 const round1 = (v: number | null) =>
   v == null ? "–" : (Math.round(v * 10) / 10).toLocaleString("id-ID");
@@ -19,13 +20,13 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 export function InsightsPanel({
-  days,
+  period,
   initialNarrative,
   initialGeneratedAt,
   forecast,
   hasData,
 }: {
-  days: number;
+  period: Period;
   initialNarrative: CohortNarrative | null;
   initialGeneratedAt: string | null;
   forecast: Forecast;
@@ -41,7 +42,7 @@ export function InsightsPanel({
     setBusy(true);
     try {
       const res = await fetch(
-        `/api/client/insights?days=${days}${force ? "&force=1" : ""}`,
+        `/api/client/insights?${periodQuery(period)}${force ? "&force=1" : ""}`,
         { method: "POST" },
       );
       const json = await res.json().catch(() => ({}));

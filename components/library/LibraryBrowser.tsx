@@ -39,8 +39,6 @@ export function LibraryBrowser({
   const [category, setCategory] = useState("Semua");
   const [showUpgrade, setShowUpgrade] = useState(false);
 
-  const aiPick = modules.find((m) => m.is_ai_recommended);
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return modules.filter((m) => {
@@ -87,63 +85,6 @@ export function LibraryBrowser({
           </button>
         ))}
       </div>
-
-      {/* AI recommendation hero */}
-      {aiPick && category === "Semua" && !query && (
-        <div className="mb-6">
-          <h2 className="font-title-lg text-title-lg text-primary mb-3 font-bold">
-            Rekomendasi AI
-          </h2>
-          <div className="bg-gradient-to-br from-primary-container to-[#003558] rounded-3xl p-6 relative overflow-hidden shadow-soft">
-            <div className="absolute -right-10 -top-10 w-40 h-40 bg-brand-cyan/20 blur-3xl rounded-full" />
-            <div className="flex items-start justify-between relative z-10">
-              <div>
-                <span className="inline-block px-3 py-1 bg-brand-cyan/20 text-brand-aqua rounded-full font-label-sm text-label-sm mb-2 border border-brand-cyan/30">
-                  AI Pick for You
-                </span>
-                <h3 className="font-headline-md text-headline-md-mobile text-on-primary mb-1">
-                  {aiPick.title}
-                </h3>
-                <p className="font-body-md text-body-md text-inverse-primary mb-4">
-                  {MODULE_META[aiPick.slug]?.description.split(".")[0]}.
-                </p>
-                <div className="flex gap-4 items-center">
-                  <div className="flex items-center text-inverse-primary font-label-sm text-label-sm">
-                    <span className="material-symbols-outlined text-[18px] mr-1">
-                      timer
-                    </span>
-                    {aiPick.duration_minutes} Min
-                  </div>
-                  <div className="flex items-center text-inverse-primary font-label-sm text-label-sm">
-                    <span className="material-symbols-outlined text-[18px] mr-1">
-                      signal_cellular_alt
-                    </span>
-                    {aiPick.difficulty}
-                  </div>
-                </div>
-              </div>
-              <div className="w-16 h-16 rounded-2xl bg-surface-container-low flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-                <div className="absolute inset-0 bg-brand-cyan/10" />
-                <span className="material-symbols-outlined text-primary relative z-10 text-[32px]">
-                  {MODULE_META[aiPick.slug]?.icon ?? "play_circle"}
-                </span>
-              </div>
-            </div>
-            <Link
-              href={MODULE_META[aiPick.slug]?.route ?? "/record"}
-              className="mt-5 w-full bg-secondary-container text-on-primary font-label-md text-label-md py-3 rounded-full hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-md"
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                play_arrow
-              </span>
-              Mulai Latihan
-            </Link>
-          </div>
-        </div>
-      )}
 
       {/* Module list */}
       <div className="flex flex-col gap-bento-gap">

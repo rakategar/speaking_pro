@@ -1,5 +1,39 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { listAnalystUsers } from "@/lib/analyst/users";
+import { previousPeriod, type Period } from "@/lib/client/period";
+import {
+  DAY_MS,
+  SELECT_RECORDINGS,
+  avg,
+  bucketByDay,
+  metricAverages,
+  toPoints,
+  type DayBucket,
+  type MetricAverages,
+  type OrgOverview,
+  type ParticipantRow,
+  type ParticipantStatus,
+  type RecordingRow,
+  type SessionPoint,
+} from "@/lib/analytics/shared";
+
+// The pure shaping and averaging live in lib/analytics/shared.ts so the
+// participant-facing /progress page can reuse them without pulling the
+// service-role client into a user request. Re-exported here because this
+// module is the established import site for these names.
+export type { Period } from "@/lib/client/period";
+export {
+  bucketByDay,
+  jakartaDayKey,
+  metricAverages,
+  type DayBucket,
+  type MetricAverages,
+  type OrgOverview,
+  type ParticipantRow,
+  type ParticipantStatus,
+  type SessionPoint,
+} from "@/lib/analytics/shared";
+
 
 // Aggregation for the B2B dashboard. Server-only, service-role.
 //
@@ -14,178 +48,6 @@ import { listAnalystUsers } from "@/lib/analyst/users";
 // data, not the organization's. That is why the select below names its columns
 // instead of using "*": reports.transcript and reports.ai_insights would
 // otherwise ride along into a dashboard the employer can read.
-
-const DAY_MS = 86_400_000;
-
-/** Jakarta calendar day as YYYY-MM-DD -- the convention jakartaDayIndex() uses. */
-export function jakartaDayKey(d: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Jakarta",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
-}
-
-export type MetricAverages = {
-  overall: number | null;
-  confidence: number | null;
-  clarity: number | null;
-  structure: number | null;
-  intonation: number | null;
-  wpm: number | null;
-  fillerWordCount: number | null;
-};
-
-export type SessionPoint = {
-  id: string;
-  userId: string;
-  createdAt: string;
-  date: string; // YYYY-MM-DD, Jakarta
-  isDrill: boolean;
-  durationSeconds: number;
-  moduleTitle: string | null;
-  category: string | null;
-  overall: number | null;
-  clarity: number | null;
-  confidence: number | null;
-  structure: number | null;
-  intonation: number | null;
-  wpm: number | null;
-  filler: number | null;
-};
-
-export type ParticipantStatus = "aktif" | "melambat" | "tidak aktif";
-
-export type ParticipantRow = {
-  userId: string;
-  name: string | null;
-  email: string;
-  joinedAt: string;
-  lastActiveAt: string | null;
-  sessions: number;
-  drills: number;
-  minutes: number;
-  avgOverall: number | null;
-  latestOverall: number | null;
-  deltaOverall: number | null;
-  status: ParticipantStatus;
-};
-
-export type DayBucket = {
-  date: string;
-  sessions: number;
-  drills: number;
-  minutes: number;
-  avgOverall: number | null;
-};
-
-export type OrgOverview = {
-  participants: number;
-  activeParticipants: number;
-  sessions: number;
-  drills: number;
-  minutes: number;
-  averages: MetricAverages | null;
-  previousAverages: MetricAverages | null;
-  daily: DayBucket[];
-};
-
-// Column list mirrors SELECT_RECORDINGS in lib/queue/weeklySummary.ts, minus
-// transcript and ai_insights. See the privacy note at the top of this file.
-const SELECT_RECORDINGS =
-  "id, user_id, created_at, status, duration_seconds, " +
-  "reports(overall_score, confidence_score, clarity_score, structure_score, intonation_score, wpm, filler_word_count), " +
-  "practice_modules(title, category)";
-
-type RecordingRow = {
-  id: string;
-  user_id: string;
-  created_at: string;
-  status: string;
-  duration_seconds: number | null;
-  reports:
-    | {
-        overall_score: number | null;
-        confidence_score: number | null;
-        clarity_score: number | null;
-        structure_score: number | null;
-        intonation_score: number | null;
-        wpm: number | null;
-        filler_word_count: number | null;
-      }[]
-    | null;
-  practice_modules: { title: string; category: string } | null;
-};
-
-function toPoints(rows: RecordingRow[]): SessionPoint[] {
-  return rows.map((r) => {
-    // The embed comes back as an array because reports has no unique
-    // constraint declared on the FK in PostgREST's view of it; there is at
-    // most one row per recording.
-    const rep = Array.isArray(r.reports) ? r.reports[0] : r.reports;
-    return {
-      id: r.id,
-      userId: r.user_id,
-      createdAt: r.created_at,
-      date: jakartaDayKey(new Date(r.created_at)),
-      isDrill: r.status === "drill_completed",
-      durationSeconds: r.duration_seconds ?? 0,
-      moduleTitle: r.practice_modules?.title ?? null,
-      category: r.practice_modules?.category ?? null,
-      overall: rep?.overall_score ?? null,
-      clarity: rep?.clarity_score ?? null,
-      confidence: rep?.confidence_score ?? null,
-      structure: rep?.structure_score ?? null,
-      intonation: rep?.intonation_score ?? null,
-      wpm: rep?.wpm ?? null,
-      filler: rep?.filler_word_count ?? null,
-    };
-  });
-}
-
-function avg(values: (number | null)[]): number | null {
-  const nums = values.filter((v): v is number => typeof v === "number");
-  if (nums.length === 0) return null;
-  return Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10;
-}
-
-export function metricAverages(points: SessionPoint[]): MetricAverages | null {
-  const scored = points.filter((p) => !p.isDrill);
-  if (scored.length === 0) return null;
-  return {
-    overall: avg(scored.map((p) => p.overall)),
-    confidence: avg(scored.map((p) => p.confidence)),
-    clarity: avg(scored.map((p) => p.clarity)),
-    structure: avg(scored.map((p) => p.structure)),
-    intonation: avg(scored.map((p) => p.intonation)),
-    wpm: avg(scored.map((p) => p.wpm)),
-    fillerWordCount: avg(scored.map((p) => p.filler)),
-  };
-}
-
-/** One bucket per calendar day in the window, including days with no activity. */
-export function bucketByDay(points: SessionPoint[], days: number, now = new Date()): DayBucket[] {
-  const byDate = new Map<string, SessionPoint[]>();
-  for (const p of points) {
-    const list = byDate.get(p.date);
-    if (list) list.push(p);
-    else byDate.set(p.date, [p]);
-  }
-  const out: DayBucket[] = [];
-  for (let i = days - 1; i >= 0; i -= 1) {
-    const date = jakartaDayKey(new Date(now.getTime() - i * DAY_MS));
-    const list = byDate.get(date) ?? [];
-    out.push({
-      date,
-      sessions: list.filter((p) => !p.isDrill).length,
-      drills: list.filter((p) => p.isDrill).length,
-      minutes: Math.round(list.reduce((a, p) => a + p.durationSeconds, 0) / 60),
-      avgOverall: avg(list.filter((p) => !p.isDrill).map((p) => p.overall)),
-    });
-  }
-  return out;
-}
 
 /** Members of one organization, with emails. */
 export async function listOrgMembers(
@@ -238,29 +100,23 @@ async function fetchPoints(
 /** Raw session points for one organization over the window. */
 export async function orgSessionPoints(
   orgId: string,
-  days: number,
-  now = new Date(),
+  period: Period,
 ): Promise<SessionPoint[]> {
   const members = await listOrgMembers(orgId);
-  return fetchPoints(
-    members.map((m) => m.id),
-    new Date(now.getTime() - days * DAY_MS),
-  );
+  return fetchPoints(members.map((m) => m.id), period.start, period.end);
 }
 
 export async function orgOverview(
   orgId: string,
-  days: number,
-  now = new Date(),
+  period: Period,
 ): Promise<OrgOverview> {
   const members = await listOrgMembers(orgId);
   const ids = members.map((m) => m.id);
-  const start = new Date(now.getTime() - days * DAY_MS);
-  const prevStart = new Date(now.getTime() - 2 * days * DAY_MS);
+  const previous = previousPeriod(period);
 
   const [points, prevPoints] = await Promise.all([
-    fetchPoints(ids, start),
-    fetchPoints(ids, prevStart, start),
+    fetchPoints(ids, period.start, period.end),
+    fetchPoints(ids, previous.start, previous.end),
   ]);
 
   const activeIds = new Set(points.map((p) => p.userId));
@@ -272,7 +128,7 @@ export async function orgOverview(
     minutes: Math.round(points.reduce((a, p) => a + p.durationSeconds, 0) / 60),
     averages: metricAverages(points),
     previousAverages: metricAverages(prevPoints),
-    daily: bucketByDay(points, days, now),
+    daily: bucketByDay(points, period.start, period.days),
   };
 }
 
@@ -290,17 +146,16 @@ function deriveStatus(lastActiveAt: string | null, now: Date): ParticipantStatus
 
 export async function listParticipants(
   orgId: string,
-  days: number,
+  period: Period,
   now = new Date(),
 ): Promise<ParticipantRow[]> {
   const members = await listOrgMembers(orgId);
   const ids = members.map((m) => m.id);
-  const start = new Date(now.getTime() - days * DAY_MS);
-  const prevStart = new Date(now.getTime() - 2 * days * DAY_MS);
+  const previous = previousPeriod(period);
 
   const [points, prevPoints] = await Promise.all([
-    fetchPoints(ids, start),
-    fetchPoints(ids, prevStart, start),
+    fetchPoints(ids, period.start, period.end),
+    fetchPoints(ids, previous.start, previous.end),
   ]);
 
   const byUser = new Map<string, SessionPoint[]>();
@@ -389,7 +244,7 @@ export type ParticipantDetail = {
 export async function participantDetail(
   orgId: string,
   userId: string,
-  days: number,
+  period: Period,
   now = new Date(),
 ): Promise<ParticipantDetail | null> {
   if (!(await assertMember(orgId, userId))) return null;
@@ -398,12 +253,11 @@ export async function participantDetail(
   const member = members.find((m) => m.id === userId);
   if (!member) return null;
 
-  const start = new Date(now.getTime() - days * DAY_MS);
-  const prevStart = new Date(now.getTime() - 2 * days * DAY_MS);
+  const previous = previousPeriod(period);
   const [points, prevPoints, rows] = await Promise.all([
-    fetchPoints([userId], start),
-    fetchPoints([userId], prevStart, start),
-    listParticipants(orgId, days, now),
+    fetchPoints([userId], period.start, period.end),
+    fetchPoints([userId], previous.start, previous.end),
+    listParticipants(orgId, period, now),
   ]);
 
   const row = rows.find((r) => r.userId === userId);
@@ -415,6 +269,6 @@ export async function participantDetail(
     points,
     averages: metricAverages(points),
     previousAverages: metricAverages(prevPoints),
-    daily: bucketByDay(points, days, now),
+    daily: bucketByDay(points, period.start, period.days),
   };
 }

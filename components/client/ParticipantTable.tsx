@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ParticipantRow, ParticipantStatus } from "@/lib/client/analytics";
 import { NotifyComposer } from "@/components/client/NotifyComposer";
+import { periodQuery, type Period } from "@/lib/client/period";
 
 const STATUS_STYLE: Record<ParticipantStatus, string> = {
   aktif: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -26,10 +27,10 @@ const fmtDate = (iso: string | null) =>
 
 export function ParticipantTable({
   participants,
-  days,
+  period,
 }: {
   participants: ParticipantRow[];
-  days: number;
+  period: Period;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -138,7 +139,7 @@ export function ParticipantTable({
                 </td>
                 <td className="p-3">
                   <Link
-                    href={`/client/participants/${p.userId}?days=${days}`}
+                    href={`/client/participants/${p.userId}?${periodQuery(period)}`}
                     className="font-semibold text-primary hover:underline"
                   >
                     {p.name ?? "(tanpa nama)"}

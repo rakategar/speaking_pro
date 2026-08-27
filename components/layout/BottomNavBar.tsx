@@ -6,13 +6,13 @@ import { cn } from "@/lib/utils";
 
 const TABS = [
   { href: "/dashboard", icon: "home", label: "Home" },
-  { href: "/library", icon: "menu_book", label: "Library" },
+  { href: "/library", icon: "psychology", label: "Mentor AI" },
   { href: "/record", icon: "mic", label: "Record" },
   { href: "/profile", icon: "person", label: "Profile" },
 ] as const;
 
 /**
- * Standardized 4-tab glassmorphic floating nav (Home/Library/Record/Profile).
+ * Standardized 4-tab glassmorphic floating nav (Home/Mentor AI/Record/Profile).
  * Mounted by (tabs)/layout.tsx for every tab route, and by (focus)/record
  * directly -- /record is a bottom-tab destination that happens to live in the
  * (focus) group for its page transitions. Every other (focus) route

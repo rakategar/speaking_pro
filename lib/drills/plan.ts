@@ -14,7 +14,7 @@ export type ReportSignals = {
 };
 
 /** Drill slugs per problem category (matches practice_modules.category). */
-const POOLS: Record<string, string[]> = {
+export const POOLS: Record<string, string[]> = {
   Artikulasi: ["aiueo-drill", "articulation-exercise", "pronunciation-practice"],
   Tempo: ["breathing-control", "pause-technique", "rhythm-training"],
   "Kepercayaan Diri": ["confidence-drill", "self-recording-practice", "guided-speaking"],
@@ -23,8 +23,8 @@ const POOLS: Record<string, string[]> = {
   Struktur: ["story-structure", "framework-speaking", "opening-closing"],
 };
 
-const ALL_CATEGORIES = Object.keys(POOLS);
-const WEAK_THRESHOLD = 70;
+export const ALL_CATEGORIES = Object.keys(POOLS);
+export const WEAK_THRESHOLD = 70;
 
 /** Problem categories sorted by severity (worst first). */
 export function flaggedCategories(s: ReportSignals | null): string[] {

@@ -224,6 +224,7 @@ export type Database = {
           id: string
           client_org_id: string
           period_days: number
+          period_key: string
           payload: Json
           facts_hash: string
           created_at: string
@@ -232,6 +233,7 @@ export type Database = {
           id?: string
           client_org_id: string
           period_days: number
+          period_key: string
           payload: Json
           facts_hash: string
           created_at?: string
@@ -240,6 +242,7 @@ export type Database = {
           id?: string
           client_org_id?: string
           period_days?: number
+          period_key?: string
           payload?: Json
           facts_hash?: string
           created_at?: string
@@ -915,6 +918,41 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mentor_plans: {
+        Row: {
+          id: string
+          user_id: string
+          report_id: string | null
+          slugs: string[]
+          payload: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          report_id?: string | null
+          slugs: string[]
+          payload: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          report_id?: string | null
+          slugs?: string[]
+          payload?: Json
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentor_plans_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
             referencedColumns: ["id"]
           },
         ]

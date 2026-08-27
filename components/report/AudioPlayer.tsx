@@ -148,7 +148,7 @@ export function AudioPlayer({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mt-3">
+      <div className="flex flex-wrap items-center gap-2 mt-3">
         <span className="font-label-sm text-label-sm text-on-surface-variant">
           Kecepatan
         </span>
@@ -167,6 +167,17 @@ export function AudioPlayer({
             {value}&times;
           </button>
         ))}
+
+        {/* Keeping a copy, not just hearing one back. Same route, same
+            per-user scoping -- ?download=1 only flips Content-Disposition. */}
+        <a
+          href={`/api/recordings/${recordingId}/audio?download=1`}
+          download
+          className="ml-auto flex items-center gap-1.5 rounded-full border border-stroke-subtle px-3 py-1 font-label-sm text-label-sm text-on-surface-variant transition-colors hover:bg-surface-container-high"
+        >
+          <span className="material-symbols-outlined text-[16px]">download</span>
+          Unduh
+        </a>
       </div>
     </section>
   );

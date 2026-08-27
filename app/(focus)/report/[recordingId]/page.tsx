@@ -340,6 +340,26 @@ export default async function ReportPage({
           </div>
         )}
         </BlurredPremiumSection>
+
+        {/* This page judges one recording. The whole journey lives at
+            /progress, which the home screen also points at. */}
+        <Link
+          href="/progress"
+          className="mb-10 flex items-center gap-3 rounded-3xl border border-stroke-subtle bg-surface-card p-4 shadow-soft transition-colors hover:border-brand-cyan/50"
+        >
+          <span className="material-symbols-outlined text-secondary-container">
+            monitoring
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-primary">Analisis Menyeluruh</p>
+            <p className="text-xs text-text-secondary">
+              Bandingkan sesi ini dengan seluruh riwayat latihan Anda.
+            </p>
+          </div>
+          <span className="material-symbols-outlined text-text-secondary">
+            chevron_right
+          </span>
+        </Link>
       </main>
     </div>
   );

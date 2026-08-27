@@ -4,19 +4,16 @@ import { readClientSession } from "@/lib/client/session";
 import { participantDetail } from "@/lib/client/analytics";
 import { forecastScores, riskFlags } from "@/lib/client/forecast";
 import { speakingLevel } from "@/lib/format";
+import { periodQuery, readPeriodFromParams } from "@/lib/client/period";
 import { PeriodPicker } from "@/components/client/PeriodPicker";
+import { PeriodError } from "@/components/client/PeriodError";
+import { AutoRefresh } from "@/components/client/AutoRefresh";
 import { Stat } from "@/components/client/Stat";
 import { ActivityBars } from "@/components/client/ActivityBars";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED_DAYS = [7, 30, 90];
 const FORECAST_HORIZON_DAYS = 30;
-
-function readDays(raw: string | string[] | undefined): number {
-  const n = Number(Array.isArray(raw) ? raw[0] : raw);
-  return ALLOWED_DAYS.includes(n) ? n : 30;
-}
 
 const round1 = (v: number | null) =>
   v == null ? "–" : (Math.round(v * 10) / 10).toLocaleString("id-ID");
@@ -45,11 +42,11 @@ export default async function ParticipantDetailPage({
   if (!session) redirect("/client/login");
 
   const { id } = await params;
-  const days = readDays((await searchParams).days);
+  const { period, error: periodError } = readPeriodFromParams(await searchParams);
 
   // Returns null for anyone outside this organization, so a guessed uuid in
   // the URL is a 404 rather than another client's participant.
-  const detail = await participantDetail(session.orgId, id, days);
+  const detail = await participantDetail(session.orgId, id, period);
   if (!detail) notFound();
 
   const { row, points, averages: avg, previousAverages: prev, daily } = detail;
@@ -62,7 +59,7 @@ export default async function ParticipantDetailPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <Link
-            href={`/client/participants?days=${days}`}
+            href={`/client/participants?${periodQuery(period)}`}
             className="text-sm font-semibold text-text-secondary hover:text-primary"
           >
             ← Kembali ke daftar peserta
@@ -73,15 +70,18 @@ export default async function ParticipantDetailPage({
           <p className="text-sm text-text-secondary">{row.email}</p>
         </div>
         <div className="flex items-center gap-2">
-          <PeriodPicker days={days} />
+          <PeriodPicker period={period} />
           <a
-            href={`/api/client/reports?days=${days}&userId=${row.userId}`}
+            href={`/api/client/reports?${periodQuery(period)}&userId=${row.userId}`}
             className="rounded-full border border-stroke-subtle bg-surface-card px-4 py-2 text-sm font-semibold text-primary shadow-soft"
           >
             Unduh PDF
           </a>
         </div>
       </div>
+
+      <PeriodError message={periodError} />
+      <AutoRefresh renderedAt={new Date().toISOString()} />
 
       {flags.length > 0 ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">

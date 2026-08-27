@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { readClientSession } from "@/lib/client/session";
 import { listParticipants, recentBroadcastCount } from "@/lib/client/analytics";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { periodFromDays } from "@/lib/client/period";
 import { NotifyView } from "@/components/client/NotifyView";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +13,9 @@ export default async function NotifyPage() {
 
   const supabase = createServiceRoleClient();
   const [participants, sentToday, { data: log }] = await Promise.all([
-    listParticipants(session.orgId, 30),
+    // Fixed 30-day window: this page is about who to nudge right now, not
+    // about a reporting period the client chose.
+    listParticipants(session.orgId, periodFromDays(30)),
     recentBroadcastCount(session.orgId),
     supabase
       .from("client_notification_log")
