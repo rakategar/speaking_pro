@@ -59,14 +59,7 @@ export async function scoreStructure(
   transcript: string,
   durationSeconds: number | null,
 ): Promise<StructureScoring> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) {
-    throw new Error(
-      "GEMINI_API_KEY belum dikonfigurasi di server. Penilaian struktur tidak dapat dijalankan.",
-    );
-  }
-
-  const res = await withGeminiRetry("scoring", async () => {
+  const res = await withGeminiRetry("scoring", async (key) => {
     await geminiLimiter.acquire("scoring", estimateTextTokens(transcript.length));
     const r = await fetch(`${BASE}/models/${MODEL}:generateContent`, {
     method: "POST",

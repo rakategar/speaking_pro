@@ -57,7 +57,12 @@ export function TopAppBar({
         <LogoHorizontal className="h-6 w-auto" />
       </div>
 
-      <div className="flex items-center justify-between px-margin-mobile py-4">
+      {/* Capped at the same max-w-lg the bottom nav and every page body use
+          (record/history/notifications/summaries) so avatar/title and the
+          trophy/bell sit near the content column on wide screens instead of
+          pinned to the true browser edges -- mobile viewports are already
+          narrower than max-w-lg, so this is a no-op there. */}
+      <div className="flex items-center justify-between px-margin-mobile py-4 max-w-lg mx-auto">
         {variant === "home" ? (
           (() => {
             const content = (

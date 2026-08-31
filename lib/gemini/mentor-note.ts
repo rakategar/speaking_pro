@@ -93,12 +93,9 @@ export async function writeMentorNote(
   facts: Record<string, unknown>,
   slugs: string[],
 ): Promise<MentorNote> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY belum dikonfigurasi di server.");
-
   const payload = JSON.stringify(facts, null, 1);
 
-  const res = await withGeminiRetry("mentor-note", async () => {
+  const res = await withGeminiRetry("mentor-note", async (key) => {
     await geminiLimiter.acquire("mentor-note", estimateTextTokens(payload.length));
     const r = await fetch(`${BASE}/models/${MODEL}:generateContent`, {
       method: "POST",

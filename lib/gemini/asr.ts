@@ -7,6 +7,7 @@ import type { AsrResult } from "@/lib/hf/asr";
 import { transcribe as hfTranscribe } from "@/lib/hf/asr";
 import { withGeminiRetry } from "./retry";
 import { geminiLimiter, estimateAudioTokens } from "./limiter";
+import { keyCount } from "./keys";
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
@@ -70,10 +71,9 @@ async function geminiOnce(audio: Blob, key: string): Promise<string> {
  * Retries on 429/5xx with backoff, then falls back to HF whisper.
  */
 export async function transcribe(audio: Blob): Promise<AsrResult> {
-  const key = process.env.GEMINI_API_KEY;
-  if (key) {
+  if (keyCount() > 0) {
     try {
-      const text = await withGeminiRetry("asr", () => geminiOnce(audio, key));
+      const text = await withGeminiRetry("asr", (key) => geminiOnce(audio, key));
       return { text, model: MODEL };
     } catch (error) {
       console.error("[asr] gemini failed, falling back to HF whisper:", error);

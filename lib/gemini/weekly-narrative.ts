@@ -98,12 +98,9 @@ function parseNarrative(raw: string): WeeklyNarrative {
 export async function writeWeeklyNarrative(
   facts: Record<string, unknown>,
 ): Promise<WeeklyNarrative> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY belum dikonfigurasi di server.");
-
   const payload = JSON.stringify(facts, null, 1);
 
-  const res = await withGeminiRetry("weekly-narrative", async () => {
+  const res = await withGeminiRetry("weekly-narrative", async (key) => {
     await geminiLimiter.acquire("weekly-narrative", estimateTextTokens(payload.length));
     const r = await fetch(`${BASE}/models/${MODEL}:generateContent`, {
       method: "POST",
