@@ -48,7 +48,16 @@ export function TopAppBar({
   return (
     <header
       className={cn(
-        "fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl",
+        // inset-x-0 (left:0; right:0), not w-full: TopAppBar is mounted
+        // inside each page's own max-w-md/max-w-lg wrapper, and a `fixed`
+        // element with `left` left auto falls back to its *static
+        // position* -- where it would sit in that narrow, centered parent's
+        // flow -- instead of the true viewport edge. w-full alone still
+        // made the box the right width, just anchored from that wrong
+        // offset, dragging everything inside it off to the right on any
+        // screen wider than the wrapper. Pinning left/right explicitly
+        // bypasses the static-position fallback entirely.
+        "fixed inset-x-0 top-0 z-50 bg-background/80 backdrop-blur-xl",
         className,
       )}
     >
