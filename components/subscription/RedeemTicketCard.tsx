@@ -3,11 +3,29 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaisalAvatar } from "@/components/ui/FaisalAvatar";
+import { cn } from "@/lib/utils";
 
-// Profile card for exchanging a redeem ticket for Premium access. Shown to
-// everyone -- an existing subscriber can redeem too, which extends their
-// current expiry rather than overwriting it.
-export function RedeemTicketCard() {
+type RedeemTicketCardProps = {
+  /** Drop the Faisal avatar and shrink the copy (pages that already show him). */
+  compact?: boolean;
+  /**
+   * Where to send the user after a successful redeem. Used by
+   * /subscription/renew, where a refresh alone would leave the lapsed user
+   * staring at the paywall they just cleared.
+   */
+  successHref?: string;
+  /** Extra classes on the card shell, so it can match the host page's cards. */
+  className?: string;
+};
+
+// Card for exchanging a redeem ticket for Premium access. Shown to everyone --
+// an existing subscriber can redeem too, which extends their current expiry
+// rather than overwriting it.
+export function RedeemTicketCard({
+  compact = false,
+  successHref,
+  className,
+}: RedeemTicketCardProps = {}) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,6 +58,12 @@ export function RedeemTicketCard() {
       setCode("");
       // Refresh so the Premium badge and quota card reflect the new state.
       router.refresh();
+      if (successHref) {
+        // Keep the paywall out of the back stack, and let the success line
+        // land before navigating away from it.
+        setTimeout(() => router.replace(successHref), 1200);
+        return;
+      }
     } catch {
       setError("Terjadi kesalahan jaringan. Coba lagi.");
     } finally {
@@ -48,13 +72,20 @@ export function RedeemTicketCard() {
   }
 
   return (
-    <section className="bg-surface-card rounded-3xl shadow-soft p-6 flex flex-col gap-4">
+    <section
+      className={cn(
+        "bg-surface-card rounded-3xl shadow-soft p-6 flex flex-col gap-4",
+        className,
+      )}
+    >
       <div className="flex items-start gap-4">
-        <FaisalAvatar
-          expression="finger-heart"
-          size={64}
-          className="shrink-0 -mt-1"
-        />
+        {!compact && (
+          <FaisalAvatar
+            expression="finger-heart"
+            size={64}
+            className="shrink-0 -mt-1"
+          />
+        )}
         <div>
           <h3 className="font-title-lg text-title-lg text-primary">
             Punya Kode Ticket?

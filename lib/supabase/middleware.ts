@@ -32,14 +32,17 @@ const ONBOARDING_API_PATH = "/api/onboarding";
 
 // Exempt from the trial hard-block below: Settings (contains logout, which
 // is a pure client-side supabase.auth.signOut() call with no server route)
-// and everything needed to actually complete an upgrade.
+// and everything needed to actually complete an upgrade -- including
+// /api/redeem, since /subscription/renew offers a ticket code as an
+// alternative to paying, and a blocked POST there would surface as a bogus
+// "network error" instead of redeeming.
 const TRIAL_EXEMPT_PATHS = [
   "/settings",
   "/help",
   "/api/help",
   "/subscription/renew",
   "/checkout",
-  "/api/checkout",
+  "/api/redeem",
   "/api/payments/subscription",
 ];
 

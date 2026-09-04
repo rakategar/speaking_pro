@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BackButton } from "@/components/ui/BackButton";
 import { FaisalAvatar } from "@/components/ui/FaisalAvatar";
 import { Logo } from "@/components/ui/Logo";
+import { RedeemTicketCard } from "@/components/subscription/RedeemTicketCard";
 import { formatRupiah } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -112,6 +113,16 @@ export default async function RenewSubscriptionPage() {
             ))}
           </ul>
         </div>
+
+        {/* Ticket code: the non-paying way out of this paywall (B2B batches,
+            giveaways). successHref matters here -- a plain refresh would drop
+            the user back on this same page even though they now have access.
+            compact drops the avatar; the hero above already shows Faisal. */}
+        <RedeemTicketCard
+          compact
+          successHref="/dashboard"
+          className="rounded-2xl border border-stroke-subtle"
+        />
       </main>
 
       {/* Fixed bottom actions */}
