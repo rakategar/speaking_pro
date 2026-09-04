@@ -13,6 +13,7 @@ import { notifyUser } from "@/lib/notifications/notify";
 import { generateWeeklySummaries } from "@/lib/queue/weeklySummary";
 import { generateMonthlyCertificates } from "@/lib/queue/monthlyCertificate";
 import { sendSubscriptionRenewalReminders } from "@/lib/queue/subscriptionReminders";
+import { expireLapsedSubscriptions } from "@/lib/queue/subscriptionExpiry";
 import { sendTrialExpiringReminders } from "@/lib/queue/trialReminders";
 
 const POLL_MS = 3_000;
@@ -189,6 +190,7 @@ export function startWorker() {
           await sendDailyReminders();
           await generateWeeklySummaries();
           await generateMonthlyCertificates();
+          await expireLapsedSubscriptions();
           await sendSubscriptionRenewalReminders();
           await sendTrialExpiringReminders();
         }
