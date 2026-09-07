@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/ui/Logo";
@@ -195,6 +196,16 @@ function LoginForm() {
               </span>
             </button>
           </div>
+          {mode === "signin" && (
+            <div className="mt-2 text-right">
+              <Link
+                href="/forgot-password"
+                className="text-label-sm font-label-sm text-brand-cyan hover:underline"
+              >
+                Lupa password?
+              </Link>
+            </div>
+          )}
         </div>
 
         {notice && (

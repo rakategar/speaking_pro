@@ -278,3 +278,26 @@ export function trialExpiringEmail(
     ),
   };
 }
+
+// Password recovery. The link carries a GoTrue recovery token that this
+// deployment mints via the Admin API and delivers here instead of over SMTP
+// (GoTrue has no mailer configured), so the copy states the same 1-hour,
+// single-use lifetime GoTrue itself enforces.
+export function passwordResetEmail(
+  name: string | null,
+  url: string,
+): { subject: string; html: string } {
+  const displayName = name?.trim() || "Sobat Speaking Pro";
+  return {
+    subject: "Atur ulang password Speaking Pro Anda",
+    html: layout(
+      "Atur ulang password Speaking Pro Anda",
+      `${sticker("thinking-idea")}
+       <p>Halo ${displayName},</p>
+       <p>Kami menerima permintaan untuk mengatur ulang password akun <strong>Speaking Pro</strong> Anda. Klik tombol di bawah untuk memasang password baru.</p>
+       ${button("Atur Password Baru", url)}
+       <p style="margin-top:24px;">Link ini berlaku <strong>1 jam</strong> dan hanya bisa dipakai sekali. Setelah itu, minta link baru dari halaman masuk.</p>
+       <p style="margin-top:16px;color:#64748b;font-size:13px;">Jika Anda tidak meminta ini, abaikan email ini — password Anda tidak berubah.</p>`,
+    ),
+  };
+}

@@ -11,9 +11,17 @@ import { SUPABASE_AUTH_COOKIE_NAME } from "@/lib/supabase/config";
 // The Midtrans webhook authenticates via sha512 signature, not a session.
 // /install is the landing page's Download CTA target -- anonymous visitors
 // must reach it before they have an account.
+// The password-reset trio is public for two different reasons: /api/auth and
+// /forgot-password are hit with no session at all, while /reset-password is
+// reached *with* one (verifyOtp just created it) and must sit above the trial
+// gate too -- a lapsed user resetting their password must not be bounced to
+// /subscription/renew halfway through.
 const PUBLIC_PATHS = [
   "/login",
   "/auth",
+  "/api/auth",
+  "/forgot-password",
+  "/reset-password",
   "/analyst",
   "/api/analyst",
   "/client",
